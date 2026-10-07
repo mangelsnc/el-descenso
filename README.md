@@ -90,6 +90,7 @@ Ideas en exploración para futuras versiones:
 - **🐺 Cerbero** — Un guardián errático en el Círculo IX que deambula por el laberinto. No te persigue, pero cruzarte con él es... problemático.
 - **⏱️ Modo contrarreloj** — Niveles individuales con leaderboard global para competir por el mejor tiempo.
 - **⛵ Caronte** — El barquero del Aqueronte aparece aleatoriamente y te teletransporta a otro punto del mapa. ¿Riesgo o salvación?
+- **🎨 Estética por círculo** — Cada nivel tiene una paleta de colores, efectos visuales y ambientación propia, inspirada en el pecado que castiga: niebla verde en Gula, llamas en Herejía, hielo en Traición...
 
 ---
 
