@@ -1,57 +1,117 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="bgGlow" cx="50%" cy="80%" r="60%">
-      <stop offset="0%" stop-color="#1a0505"/>
-      <stop offset="50%" stop-color="#0d0202"/>
+    <!-- Fondo general -->
+    <radialGradient id="bgGrad" cx="50%" cy="60%" r="70%">
+      <stop offset="0%" stop-color="#0d0505"/>
+      <stop offset="60%" stop-color="#050202"/>
       <stop offset="100%" stop-color="#000"/>
     </radialGradient>
-    <radialGradient id="fireGlow" cx="50%" cy="70%" r="50%">
-      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0"/>
+    
+    <!-- Resplandor de la puerta (breathe) -->
+    <radialGradient id="gateGlow" cx="50%" cy="75%" r="50%">
+      <stop offset="0%" stop-color="#ff3c0a" stop-opacity="0.35"/>
+      <stop offset="50%" stop-color="#ff6b1a" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#ff6b1a" stop-opacity="0"/>
     </radialGradient>
-    <filter id="textGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
+    
+    <!-- Luz de la ranura (slit) -->
+    <linearGradient id="slitGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#500800" stop-opacity="0.2"/>
+      <stop offset="70%" stop-color="#ff460f" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#ff781e" stop-opacity="0.9"/>
+    </linearGradient>
+    
+    <!-- Pilares -->
+    <linearGradient id="pillarGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1c1c20"/>
+      <stop offset="45%" stop-color="#33333a"/>
+      <stop offset="100%" stop-color="#17171b"/>
+    </linearGradient>
+    
+    <!-- Hojas de la puerta -->
+    <linearGradient id="leafGradL" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#101014"/>
+      <stop offset="50%" stop-color="#232329"/>
+      <stop offset="100%" stop-color="#101014"/>
+    </linearGradient>
+    <linearGradient id="leafGradR" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#101014"/>
+      <stop offset="50%" stop-color="#232329"/>
+      <stop offset="100%" stop-color="#101014"/>
+    </linearGradient>
+    
+    <!-- Filtro de brillo para texto -->
+    <filter id="titleGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
       <feMerge>
+        <feMergeNode in="blur"/>
         <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+    
+    <!-- Filtro de desenfoque para la luz -->
+    <filter id="blurLight">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
   </defs>
   
   <!-- Fondo -->
-  <rect width="1200" height="630" fill="url(#bgGlow)"/>
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
   
-  <!-- Resplandor de fuego inferior -->
-  <ellipse cx="600" cy="500" rx="400" ry="150" fill="url(#fireGlow)"/>
+  <!-- Resplandor ambiental alrededor de la puerta -->
+  <ellipse cx="600" cy="380" rx="350" ry="180" fill="url(#gateGlow)"/>
   
-  <!-- Puerta estilizada -->
-  <g transform="translate(600, 280)">
-    <!-- Marco exterior -->
-    <rect x="-120" y="-140" width="240" height="280" fill="#1c1c20" stroke="#000" stroke-width="3"/>
-    <!-- Pilares -->
-    <rect x="-140" y="-160" width="40" height="320" fill="#2a2a30" stroke="#000" stroke-width="2"/>
-    <rect x="100" y="-160" width="40" height="320" fill="#2a2a30" stroke="#000" stroke-width="2"/>
-    <!-- Dintel -->
-    <rect x="-140" y="-180" width="280" height="30" fill="#33333a" stroke="#000" stroke-width="2"/>
-    <!-- Puertas entreabiertas -->
-    <rect x="-100" y="-120" width="85" height="240" fill="#0d0505" transform="rotate(-8 -100 -120)"/>
-    <rect x="15" y="-120" width="85" height="240" fill="#0d0505" transform="rotate(8 100 -120)"/>
-    <!-- Luz del interior -->
-    <ellipse cx="0" cy="60" rx="50" ry="80" fill="#ff6b35" opacity="0.3"/>
-    <ellipse cx="0" cy="80" rx="30" ry="50" fill="#ff8c42" opacity="0.5"/>
+  <!-- INSCRIPCIÓN DANTE -->
+  <text x="600" y="105" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-style="italic" fill="#8a7f72" letter-spacing="4">«LASCIATE OGNE SPERANZA, VOI CH'INTRATE»</text>
+  
+  <!-- PUERTA DEL INFIERNO -->
+  <g transform="translate(600, 320)">
+    
+    <!-- Pilar izquierdo -->
+    <rect x="-180" y="-140" width="36" height="280" fill="url(#pillarGrad)" stroke="#000" stroke-width="2"/>
+    <!-- Capitel pilar izquierdo -->
+    <rect x="-186" y="-158" width="48" height="20" fill="#26262c" stroke="#000" stroke-width="2"/>
+    
+    <!-- Pilar derecho -->
+    <rect x="144" y="-140" width="36" height="280" fill="url(#pillarGrad)" stroke="#000" stroke-width="2"/>
+    <!-- Capitel pilar derecho -->
+    <rect x="138" y="-158" width="48" height="20" fill="#26262c" stroke="#000" stroke-width="2"/>
+    
+    <!-- Hoja izquierda (entreabierta, perspectiva) -->
+    <g transform="translate(-144, 0)">
+      <path d="M 0,-140 L 108,-125 L 108,125 L 0,140 Z" fill="url(#leafGradL)" stroke="#000" stroke-width="2"/>
+      <!-- Bandas horizontales de la hoja -->
+      <path d="M 8,-60 L 100,-52 L 100,-42 L 8,-50 Z" fill="#1b1b21" stroke="#000" stroke-width="1"/>
+      <path d="M 8,42 L 100,50 L 100,60 L 8,52 Z" fill="#1b1b21" stroke="#000" stroke-width="1"/>
+    </g>
+    
+    <!-- Hoja derecha (entreabierta, perspectiva) -->
+    <g transform="translate(144, 0)">
+      <path d="M 0,-140 L -108,-125 L -108,125 L 0,140 Z" fill="url(#leafGradR)" stroke="#000" stroke-width="2"/>
+      <!-- Bandas horizontales de la hoja -->
+      <path d="M -8,-60 L -100,-52 L -100,-42 L -8,-50 Z" fill="#1b1b21" stroke="#000" stroke-width="1"/>
+      <path d="M -8,42 L -100,50 L -100,60 L -8,52 Z" fill="#1b1b21" stroke="#000" stroke-width="1"/>
+    </g>
+    
+    <!-- LA RENDIJA DE LUZ (slit) -->
+    <rect x="-22" y="-140" width="44" height="280" fill="url(#slitGrad)" filter="url(#blurLight)" opacity="0.9"/>
+    <rect x="-12" y="-140" width="24" height="280" fill="#ff781e" opacity="0.6" filter="url(#blurLight)"/>
+    
   </g>
   
-  <!-- Título -->
-  <text x="600" y="520" text-anchor="middle" font-family="Georgia, serif" font-size="72" font-weight="bold" fill="#b00" filter="url(#textGlow)" letter-spacing="8">EL DESCENSO</text>
+  <!-- TÍTULO -->
+  <text x="600" y="540" text-anchor="middle" font-family="Georgia, serif" font-size="84" font-weight="bold" fill="#b00" filter="url(#titleGlow)" letter-spacing="12">EL DESCENSO</text>
   
-  <!-- Subtítulo -->
-  <text x="600" y="570" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-style="italic" fill="#977">«Abandonad toda esperanza, los que entráis aquí»</text>
+  <!-- SUBTÍTULO -->
+  <text x="600" y="590" text-anchor="middle" font-family="Georgia, serif" font-size="26" font-style="italic" fill="#977">Abandonad toda esperanza, los que entráis aquí</text>
   
-  <!-- Decoración: brasas flotantes -->
-  <circle cx="200" cy="150" r="3" fill="#f60" opacity="0.6"/>
-  <circle cx="350" cy="100" r="2" fill="#f60" opacity="0.4"/>
-  <circle cx="850" cy="120" r="2.5" fill="#f60" opacity="0.5"/>
-  <circle cx="1000" cy="180" r="2" fill="#f60" opacity="0.3"/>
-  <circle cx="150" cy="400" r="2" fill="#f60" opacity="0.4"/>
-  <circle cx="1050" cy="380" r="3" fill="#f60" opacity="0.5"/>
+  <!-- Brasas flotantes decorativas -->
+  <circle cx="180" cy="180" r="2.5" fill="#f60" opacity="0.5"/>
+  <circle cx="320" cy="120" r="2" fill="#f60" opacity="0.35"/>
+  <circle cx="880" cy="140" r="2" fill="#f60" opacity="0.4"/>
+  <circle cx="1020" cy="200" r="2.5" fill="#f60" opacity="0.3"/>
+  <circle cx="150" cy="450" r="2" fill="#f60" opacity="0.4"/>
+  <circle cx="1050" cy="420" r="2" fill="#f60" opacity="0.35"/>
+  
 </svg>
