@@ -581,30 +581,55 @@ cv.addEventListener('touchmove',e=>{
 cv.addEventListener('touchend',()=>{dir={x:0,y:0};});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 
+const SUPABASE_URL='https://segmiclguvbhziwsafxw.supabase.co';
+const SUPABASE_KEY='sb_publishable_LB778EdNYTWRb_mnqeiinw_R-wr12v9';
 let memRank=[];
-function getRank(){
-  try{return JSON.parse(localStorage.getItem('descenso_rank')||'[]');}catch(e){return memRank;}
+async function getRank(){
+  try{
+    const res=await fetch(SUPABASE_URL+'/rest/v1/ranking?select=name,time_ms&order=time_ms.asc&limit=50',{
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    return data.map(r=>({name:r.name,ms:r.time_ms}));
+  }catch(e){
+    console.error('Error cargando ranking:',e);
+    return memRank;
+  }
 }
-function saveRank(name,ms){
-  const r=getRank();const entry={name:name,ms:ms,d:Date.now()};
-  r.push(entry);r.sort((a,b)=>a.ms-b.ms);
-  const top=r.slice(0,50);
-  try{localStorage.setItem('descenso_rank',JSON.stringify(top));}catch(e){memRank=top;}
-  return{list:top,entry:entry};
+async function saveRank(name,ms){
+  const entry={name:name,time_ms:ms};
+  try{
+    const res=await fetch(SUPABASE_URL+'/rest/v1/ranking',{
+      method:'POST',
+      headers:{
+        'apikey':SUPABASE_KEY,
+        'Authorization':'Bearer '+SUPABASE_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body:JSON.stringify(entry)
+    });
+    if(!res.ok)throw new Error('HTTP '+res.status);
+  }catch(e){
+    console.error('Error guardando tiempo:',e);
+  }
+  const list=await getRank();
+  return{list:list,entry:{name:name,ms:ms}};
 }
 function renderRank(list,entry){
   const el=$('rankList');el.innerHTML='';
   list.slice(0,10).forEach((r,i)=>{
     const li=document.createElement('li');
-    if(entry&&r===entry)li.className='me';
+    if(entry&&r.name===entry.name&&r.ms===entry.ms)li.className='me';
     li.innerHTML='<span>'+(i+1)+'. '+escapeHtml(r.name)+'</span><span>'+fmt(r.ms)+'</span>';
     el.appendChild(li);
   });
 }
-function renderStartRank(){
-  const r=getRank();
+async function renderStartRank(){
+  const r=await getRank();
   if(!r.length){$('startRank').innerHTML='';return;}
-  let h='<div style="margin-top:8px">— MEJORES TIEMPOS —<br>';
+  let h='<div style="margin-top:8px">— MEJORES TIEMPOS GLOBALES —<br>';
   r.slice(0,5).forEach((x,i)=>{h+=(i+1)+'. '+escapeHtml(x.name)+' · '+fmt(x.ms)+'<br>';});
   $('startRank').innerHTML=h+'</div>';
 }
@@ -668,9 +693,9 @@ function win(){
 }
 $('startBtn').onclick=startGame;
 $('againBtn').onclick=startGame;
-$('signBtn').onclick=()=>{
+$('signBtn').onclick=async()=>{
   const name=($('nameInput').value.trim()||'ANÓNIMO').toUpperCase();
-  const res=saveRank(name,finalTime);
+  const res=await saveRank(name,finalTime);
   renderRank(res.list,res.entry);
   $('signBox').classList.add('hidden');
   $('rankBox').classList.remove('hidden');
