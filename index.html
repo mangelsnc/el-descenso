@@ -696,7 +696,7 @@ $('startBtn').onclick=startGame;
 $('againBtn').onclick=startGame;
 $('signBtn').onclick=async()=>{
   const name=($('nameInput').value.trim()||'ANÓNIMO').toUpperCase();
-  const res=await saveRank(name,finalTime);
+  const res=await saveRank(name,Math.round(finalTime));
   renderRank(res.list,res.entry);
   $('signBox').classList.add('hidden');
   $('rankBox').classList.remove('hidden');
