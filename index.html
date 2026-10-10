@@ -598,7 +598,7 @@ async function getRank(){
   }
 }
 async function saveRank(name,ms){
-  const entry={name:name,time_ms:ms};
+  const entry={name:String(name).trim().toUpperCase().slice(0,12),time_ms:Math.round(Number(ms))};
   try{
     const res=await fetch(SUPABASE_URL+'/rest/v1/ranking',{
       method:'POST',
