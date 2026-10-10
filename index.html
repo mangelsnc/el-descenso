@@ -630,7 +630,8 @@ async function renderStartRank(){
   const r=await getRank();
   if(!r.length){$('startRank').innerHTML='';return;}
   let h='<div style="margin-top:8px">— MEJORES TIEMPOS GLOBALES —<br>';
-  r.slice(0,5).forEach((x,i)=>{h+=(i+1)+'. '+escapeHtml(x.name)+' · '+fmt(x.ms)+'<br>';});
+  r.slice(0,10).forEach((x,i)=>{h+=(i+1)+'. '+escapeHtml(x.name)+' · '+fmt(x.ms)+'<br>';});
+  h+='<a href="ranking.html" style="color:#a77;text-decoration:none;font-size:12px;letter-spacing:1px">[ VER RANKING COMPLETO ]</a>';
   $('startRank').innerHTML=h+'</div>';
 }
 renderStartRank();
