@@ -1,0 +1,57 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="80%" r="60%">
+      <stop offset="0%" stop-color="#1a0505"/>
+      <stop offset="50%" stop-color="#0d0202"/>
+      <stop offset="100%" stop-color="#000"/>
+    </radialGradient>
+    <radialGradient id="fireGlow" cx="50%" cy="70%" r="50%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="textGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Fondo -->
+  <rect width="1200" height="630" fill="url(#bgGlow)"/>
+  
+  <!-- Resplandor de fuego inferior -->
+  <ellipse cx="600" cy="500" rx="400" ry="150" fill="url(#fireGlow)"/>
+  
+  <!-- Puerta estilizada -->
+  <g transform="translate(600, 280)">
+    <!-- Marco exterior -->
+    <rect x="-120" y="-140" width="240" height="280" fill="#1c1c20" stroke="#000" stroke-width="3"/>
+    <!-- Pilares -->
+    <rect x="-140" y="-160" width="40" height="320" fill="#2a2a30" stroke="#000" stroke-width="2"/>
+    <rect x="100" y="-160" width="40" height="320" fill="#2a2a30" stroke="#000" stroke-width="2"/>
+    <!-- Dintel -->
+    <rect x="-140" y="-180" width="280" height="30" fill="#33333a" stroke="#000" stroke-width="2"/>
+    <!-- Puertas entreabiertas -->
+    <rect x="-100" y="-120" width="85" height="240" fill="#0d0505" transform="rotate(-8 -100 -120)"/>
+    <rect x="15" y="-120" width="85" height="240" fill="#0d0505" transform="rotate(8 100 -120)"/>
+    <!-- Luz del interior -->
+    <ellipse cx="0" cy="60" rx="50" ry="80" fill="#ff6b35" opacity="0.3"/>
+    <ellipse cx="0" cy="80" rx="30" ry="50" fill="#ff8c42" opacity="0.5"/>
+  </g>
+  
+  <!-- Título -->
+  <text x="600" y="520" text-anchor="middle" font-family="Georgia, serif" font-size="72" font-weight="bold" fill="#b00" filter="url(#textGlow)" letter-spacing="8">EL DESCENSO</text>
+  
+  <!-- Subtítulo -->
+  <text x="600" y="570" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-style="italic" fill="#977">«Abandonad toda esperanza, los que entráis aquí»</text>
+  
+  <!-- Decoración: brasas flotantes -->
+  <circle cx="200" cy="150" r="3" fill="#f60" opacity="0.6"/>
+  <circle cx="350" cy="100" r="2" fill="#f60" opacity="0.4"/>
+  <circle cx="850" cy="120" r="2.5" fill="#f60" opacity="0.5"/>
+  <circle cx="1000" cy="180" r="2" fill="#f60" opacity="0.3"/>
+  <circle cx="150" cy="400" r="2" fill="#f60" opacity="0.4"/>
+  <circle cx="1050" cy="380" r="3" fill="#f60" opacity="0.5"/>
+</svg>
