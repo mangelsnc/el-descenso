@@ -162,8 +162,15 @@ input{font-family:inherit;font-size:20px;padding:10px;background:#0d0000;color:#
 const $=id=>document.getElementById(id);
 const cv=$('game'),ctx=cv.getContext('2d');
 const LEVELS=[8,10,12,15,18,21,24,27,30,32];
-const DEBUG=new URLSearchParams(location.search).has('debug');
-if(DEBUG)LEVELS.length=1;
+const DEBUG_PARAM=new URLSearchParams(location.search).get('debug');
+const DEBUG=DEBUG_PARAM!==null;
+const DEBUG_LEVEL=DEBUG?Math.min(10,Math.max(1,parseInt(DEBUG_PARAM)||1)):0;
+if(DEBUG){
+  // Crear array con un solo nivel: el seleccionado
+  const selectedSize=LEVELS[DEBUG_LEVEL-1];
+  LEVELS.length=0;
+  LEVELS.push(selectedSize);
+}
 const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX'];
 const CIRCLE_NAMES=['LIMBO','LUJURIA','GULA','AVARICIA','IRA','HEREJÍA','VIOLENCIA','FRAUDE','TRAICIÓN'];
 function levelName(i){return i===0?'LA PUERTA':'CÍRCULO '+ROMAN[i-1]+' · '+CIRCLE_NAMES[i-1];}
@@ -671,7 +678,7 @@ function startGame(){
   $('pauseScreen').classList.add('hidden');
   $('byeScreen').classList.add('hidden');
   $('hud').classList.remove('hidden');
-  if(DEBUG)$('hud').innerHTML+='<div style="position:fixed;top:60px;right:20px;color:#f60;font-size:12px;letter-spacing:2px">[DEBUG]</div>';
+  if(DEBUG)$('hud').innerHTML+='<div style="position:fixed;top:60px;right:20px;color:#f60;font-size:12px;letter-spacing:2px">[DEBUG NIVEL '+DEBUG_LEVEL+']</div>';
 }
 function completeLevel(){
   totalMs+=mazeTime;flash=1;SFX.stinger();
