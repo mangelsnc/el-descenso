@@ -117,8 +117,8 @@ input{font-family:inherit;font-size:20px;padding:10px;background:#0d0000;color:#
     🔦 <b>Flechas o WASD</b> para moverte · llega hasta la 💀<br>
     ⚡ En cuanto cruces la meta, el siguiente empieza <b>sin avisar</b>.<br>
     🌀 Hay bucles y callejones sin salida. La luz se apaga a cada círculo.<br>
-    🔥 Desde el Círculo IV: <b style="color:#fa0">bengalas</b> (brasa naranja) — 12s de luz amplia.<br>
-    🕯️ Desde el Círculo VI: <b style="color:#7af">vela</b> (brasa azul) — alarga el fuego: +8s si llevas bengala, +3s si no.<br>
+    🔥 Desde el Círculo IV: <b style="color:#fa0">antorchas</b> (brasa naranja) — 12s de luz amplia.<br>
+    🕯️ Desde el Círculo VI: <b style="color:#7af">vela</b> (brasa azul) — alarga el fuego: +8s si llevas antorcha, +3s si no.<br>
     🏃 Cuanto más rápido resuelvas, más brasas aparecen.<br>
     ⏸ <b>ESC / P</b> pausa · <b>M</b> silenciar
   </p>
@@ -174,6 +174,21 @@ if(DEBUG){
 const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX'];
 const CIRCLE_NAMES=['LIMBO','LUJURIA','GULA','AVARICIA','IRA','HEREJÍA','VIOLENCIA','FRAUDE','TRAICIÓN'];
 function levelName(i){return i===0?'LA PUERTA':'CÍRCULO '+ROMAN[i-1]+' · '+CIRCLE_NAMES[i-1];}
+
+// Paletas por círculo: [paredBase, paredLuz, sueloBase, sueloLuz, nieblaColor, nieblaOpacidad]
+const CIRCLE_THEMES=[
+  null, // 0 = La Puerta (usa default)
+  {wall:[24,6,9],   wallLight:[119,20,25],  floor:[9,8,8],   floorLight:[45,40,38],  fog:'#0a0505', fogOp:0.65}, // I Limbo
+  {wall:[35,10,20], wallLight:[140,40,60],  floor:[15,8,12], floorLight:[60,30,45],  fog:'#150a0f', fogOp:0.60}, // II Lujuria
+  {wall:[40,25,5],  wallLight:[160,100,20], floor:[18,12,4], floorLight:[70,50,15],  fog:'#120c02', fogOp:0.62}, // III Gula
+  {wall:[30,30,35], wallLight:[100,100,120],floor:[12,12,15],floorLight:[50,50,60],  fog:'#0a0a0f', fogOp:0.68}, // IV Avaricia
+  {wall:[45,15,10], wallLight:[180,60,30],  floor:[20,8,5],  floorLight:[80,30,15],  fog:'#180a05', fogOp:0.58}, // V Ira
+  {wall:[20,35,25], wallLight:[60,140,90],  floor:[8,15,10], floorLight:[30,60,40],  fog:'#05120a', fogOp:0.63}, // VI Herejía
+  {wall:[35,20,40], wallLight:[140,80,160], floor:[15,8,18], floorLight:[60,30,70],  fog:'#0f0512', fogOp:0.61}, // VII Violencia
+  {wall:[25,25,45], wallLight:[80,80,180],  floor:[10,10,20],floorLight:[40,40,80],  fog:'#08081a', fogOp:0.66}, // VIII Fraude
+  {wall:[10,10,10], wallLight:[40,40,45],   floor:[4,4,5],   floorLight:[18,18,22],  fog:'#020202', fogOp:0.75}, // IX Traición
+];
+
 const FLARE_MS=12000, FLARE_BOOST=1.9;
 const FLARE_MIN_LEVEL=4;
 const EXT_MIN_LEVEL=6;
@@ -312,6 +327,7 @@ function draw(t){
   const warm=flareActive();
   const boost=warm?flareBoost:1;
   const lightR=cellPx*shrink*boost*flick,reach=lightR*2.5;
+  const theme=CIRCLE_THEMES[level]||CIRCLE_THEMES[1];
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){
     const cxp=x*cellPx,cyp=y*cellPx;
     const dx=cxp+cellPx/2-pxc,dy=cyp+cellPx/2-pyc;
@@ -319,10 +335,16 @@ function draw(t){
     let l=1-d/reach;if(l<0)l=0;
     if(maze[y][x]===1){
       const w=warm?l*30:0;
-      ctx.fillStyle='rgb('+((24+l*95+w)|0)+','+((6+l*14+w*0.55)|0)+','+((9+l*16)|0)+')';
+      const r=theme.wall[0]+l*(theme.wallLight[0]-theme.wall[0])+w;
+      const g=theme.wall[1]+l*(theme.wallLight[1]-theme.wall[1])+w*0.55;
+      const b=theme.wall[2]+l*(theme.wallLight[2]-theme.wall[2]);
+      ctx.fillStyle='rgb('+(r|0)+','+(g|0)+','+(b|0)+')';
     }else{
       const v=9+l*36;
-      ctx.fillStyle='rgb('+(v+(warm?l*26:0)|0)+','+((v*0.85+(warm?l*12:0))|0)+','+((v*0.92)|0)+')';
+      const r=theme.floor[0]+l*(theme.floorLight[0]-theme.floor[0])+(warm?l*26:0);
+      const g=theme.floor[1]+l*(theme.floorLight[1]-theme.floor[1])+(warm?l*12:0);
+      const b=theme.floor[2]+l*(theme.floorLight[2]-theme.floor[2]);
+      ctx.fillStyle='rgb('+(r|0)+','+(g|0)+','+(b|0)+')';
     }
     ctx.fillRect(cxp,cyp,cellPx+0.6,cellPx+0.6);
   }
@@ -369,7 +391,8 @@ function draw(t){
   g2.addColorStop(0,'rgba(0,0,0,0)');g2.addColorStop(1,'rgba(0,0,0,0.8)');
   ctx.fillStyle=g2;ctx.fillRect(0,0,side,side);
   const v=ctx.createRadialGradient(side/2,side/2,side*0.32,side/2,side/2,side*0.72);
-  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,0.65)');
+  v.addColorStop(0,'rgba(0,0,0,0)');
+  v.addColorStop(1,theme.fog+Math.round(theme.fogOp*255).toString(16).padStart(2,'0'));
   ctx.fillStyle=v;ctx.fillRect(0,0,side,side);
   if(flash>0){
     ctx.fillStyle='rgba(130,0,0,'+(flash*0.5)+')';
