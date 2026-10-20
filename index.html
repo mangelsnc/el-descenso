@@ -160,17 +160,19 @@ input{font-family:inherit;font-size:20px;padding:10px;background:#0d0000;color:#
 </div>
 
 <script>
-const $=id=>document.getElementById(id);
-const cv=$('game'),ctx=cv.getContext('2d');
+const _$=id=>document.getElementById(id);
+const cv=_$('game'),ctx=cv.getContext('2d');
 const LEVELS=[8,10,12,15,18,21,24,27,30,32];
 const DEBUG_PARAM=new URLSearchParams(location.search).get('debug');
 const DEBUG=DEBUG_PARAM!==null;
 const DEBUG_LEVEL=DEBUG?Math.min(10,Math.max(1,parseInt(DEBUG_PARAM)||1)):0;
+let DEBUG_START_LEVEL=0;
 if(DEBUG){
   // Crear array con un solo nivel: el seleccionado
   const selectedSize=LEVELS[DEBUG_LEVEL-1];
   LEVELS.length=0;
   LEVELS.push(selectedSize);
+  DEBUG_START_LEVEL=DEBUG_LEVEL-1; // level empieza en 0
 }
 const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX'];
 const CIRCLE_NAMES=['LIMBO','LUJURIA','GULA','AVARICIA','IRA','HEREJÍA','VIOLENCIA','FRAUDE','TRAICIÓN'];
@@ -180,16 +182,16 @@ const FLARE_MIN_LEVEL=4;
 const EXT_MIN_LEVEL=6;
 const EXT_BONUS_MS=8000, EXT_SOLO_MS=3000, EXT_SOLO_BOOST=1.35;
 const CERBERO_MIN_LEVEL=5;
-const CERBERO_BASE_SPEED=1500; // ms entre movimientos
-const CERBERO_SPEED_FACTOR=100; // reducción por nivel
+const CERBERO_BASE_SPEED=2.5; // celdas por segundo
+const CERBERO_SPEED_FACTOR=0.3; // aumento por nivel
 let dpr=Math.min(devicePixelRatio||1,2),side=0,cellPx=8;
-let level=0,N=0,maze=null,goal={x:0,y:0};
+let level=DEBUG_START_LEVEL,N=0,maze=null,goal={x:0,y:0};
 let player={cx:1,cy:1,x:1,y:1,tx:1,ty:1,lerp:1};
 let dir={x:0,y:0};
 let mazeStart=0,mazeTime=0,totalMs=0,running=false,paused=false,pauseStart=0;
 let flash=0,dtLast=0,lastT=0,finalTime=0;
 let items=[],flareUntil=0,flareBoost=0,speedBonus=0;
-let cerbero=null,cerberoTimer=0,cerberoWarned=false;
+let cerbero=null,cerberoWarned=false;
 
 function resize(){
   side=Math.max(240,Math.min(innerWidth,innerHeight*0.8));
@@ -202,51 +204,53 @@ addEventListener('resize',resize);resize();
 function initCerbero(){
   if(level<CERBERO_MIN_LEVEL){cerbero=null;return;}
   // Spawn en esquina opuesta al jugador
-  cerbero={x:N-2,y:1,moveTimer:0};
-  cerberoWarned=false;
+  cerbero={x:N-2,y:1,px:N-2,py:1,moveCooldown:0};
 }
 
-function moveCerbero(){
+function moveCerbero(dt){
   if(!cerbero||!running||paused)return;
-  const speed=Math.max(400,CERBERO_BASE_SPEED-(level*CERBERO_SPEED_FACTOR));
-  const now=performance.now();
-  if(now-cerbero.moveTimer<speed)return;
-  cerbero.moveTimer=now;
+  
+  // Cooldown entre movimientos (más rápido en niveles altos)
+  const cooldown=Math.max(300,800-(level*50));
+  cerbero.moveCooldown-=dt;
+  if(cerbero.moveCooldown>0)return;
+  cerbero.moveCooldown=cooldown;
   
   // Movimiento greedy hacia el jugador
   const dx=player.cx-cerbero.x,dy=player.cy-cerbero.y;
-  const opts=[];
+  let moved=false;
   
-  // Priorizar dirección hacia el jugador
+  // Intentar moverse hacia el jugador
   if(Math.abs(dx)>Math.abs(dy)){
-    if(dx>0&&maze[cerbero.y][cerbero.x+1]===0)opts.push([1,0]);
-    if(dx<0&&maze[cerbero.y][cerbero.x-1]===0)opts.push([-1,0]);
-    if(dy>0&&maze[cerbero.y+1][cerbero.x]===0)opts.push([0,1]);
-    if(dy<0&&maze[cerbero.y-1][cerbero.x]===0)opts.push([0,-1]);
+    // Prioridad horizontal
+    if(dx>0&&maze[cerbero.y][cerbero.x+1]===0){cerbero.x++;moved=true;}
+    else if(dx<0&&maze[cerbero.y][cerbero.x-1]===0){cerbero.x--;moved=true;}
+    else if(dy>0&&maze[cerbero.y+1][cerbero.x]===0){cerbero.y++;moved=true;}
+    else if(dy<0&&maze[cerbero.y-1][cerbero.x]===0){cerbero.y--;moved=true;}
   }else{
-    if(dy>0&&maze[cerbero.y+1][cerbero.x]===0)opts.push([0,1]);
-    if(dy<0&&maze[cerbero.y-1][cerbero.x]===0)opts.push([0,-1]);
-    if(dx>0&&maze[cerbero.y][cerbero.x+1]===0)opts.push([1,0]);
-    if(dx<0&&maze[cerbero.y][cerbero.x-1]===0)opts.push([-1,0]);
+    // Prioridad vertical
+    if(dy>0&&maze[cerbero.y+1][cerbero.x]===0){cerbero.y++;moved=true;}
+    else if(dy<0&&maze[cerbero.y-1][cerbero.x]===0){cerbero.y--;moved=true;}
+    else if(dx>0&&maze[cerbero.y][cerbero.x+1]===0){cerbero.x++;moved=true;}
+    else if(dx<0&&maze[cerbero.y][cerbero.x-1]===0){cerbero.x--;moved=true;}
   }
   
-  // Si no hay camino directo, movimiento aleatorio
-  if(!opts.length){
+  // Si no pudo moverse hacia el jugador, movimiento aleatorio
+  if(!moved){
     const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+    const valid=[];
     for(const d of dirs){
       const nx=cerbero.x+d[0],ny=cerbero.y+d[1];
-      if(maze[ny]&&maze[ny][nx]===0)opts.push(d);
+      if(maze[ny]&&maze[ny][nx]===0)valid.push(d);
+    }
+    if(valid.length){
+      const d=valid[(Math.random()*valid.length)|0];
+      cerbero.x+=d[0];cerbero.y+=d[1];
     }
   }
   
-  if(opts.length){
-    const move=opts[(Math.random()*opts.length)|0];
-    cerbero.x+=move[0];cerbero.y+=move[1];
-  }
-  
-  // Colisión con jugador
+  // Colisión simple: si está en la misma celda que el jugador, muerte
   if(cerbero.x===player.cx&&cerbero.y===player.cy){
-    // Reiniciar nivel, no tiempo
     flash=1;SFX.stinger();
     startLevel();
     return;
@@ -588,14 +592,14 @@ const SFX={
     return this.muted;
   }
 };
-function toggleMute(){const m=SFX.toggleMute();$('muteBtn').textContent=m?'🔇 silenciado':'🔊 sonido';}
-$('muteBtn').onclick=toggleMute;
+function toggleMute(){const m=SFX.toggleMute();_$('muteBtn').textContent=m?'🔇 silenciado':'🔊 sonido';}
+_$('muteBtn').onclick=toggleMute;
 
 function pauseGame(){
   if(!running||paused)return;
   paused=true;pauseStart=performance.now();
   SFX.suspend();
-  $('pauseScreen').classList.remove('hidden');
+  _$('pauseScreen').classList.remove('hidden');
 }
 function resumeGame(){
   if(!paused)return;
@@ -604,43 +608,43 @@ function resumeGame(){
   mazeStart+=pd;
   if(flareUntil>pauseStart)flareUntil+=pd;
   SFX.resume();
-  $('pauseScreen').classList.add('hidden');
+  _$('pauseScreen').classList.add('hidden');
 }
 function quitRun(){
   running=false;paused=false;
   SFX.resume();
-  $('pauseScreen').classList.add('hidden');
-  $('hud').classList.add('hidden');
+  _$('pauseScreen').classList.add('hidden');
+  _$('hud').classList.add('hidden');
   renderStartRank();
-  $('startScreen').classList.remove('hidden');
+  _$('startScreen').classList.remove('hidden');
 }
 function quitGame(){
   running=false;paused=false;
-  $('pauseScreen').classList.add('hidden');
-  $('hud').classList.add('hidden');
-  $('byeScreen').classList.remove('hidden');
+  _$('pauseScreen').classList.add('hidden');
+  _$('hud').classList.add('hidden');
+  _$('byeScreen').classList.remove('hidden');
 }
-$('pauseBtn').onclick=pauseGame;
-$('resumeBtn').onclick=resumeGame;
-$('quitRunBtn').onclick=quitRun;
-$('quitGameBtn').onclick=quitGame;
-$('backBtn').onclick=()=>{
-  $('byeScreen').classList.add('hidden');
+_$('pauseBtn').onclick=pauseGame;
+_$('resumeBtn').onclick=resumeGame;
+_$('quitRunBtn').onclick=quitRun;
+_$('quitGameBtn').onclick=quitGame;
+_$('backBtn').onclick=()=>{
+  _$('byeScreen').classList.add('hidden');
   renderStartRank();
-  $('startScreen').classList.remove('hidden');
+  _$('startScreen').classList.remove('hidden');
 };
-$('helpBtn').onclick=()=>{
-  $('startScreen').classList.add('hidden');
-  $('helpScreen').classList.remove('hidden');
+_$('helpBtn').onclick=()=>{
+  _$('startScreen').classList.add('hidden');
+  _$('helpScreen').classList.remove('hidden');
 };
-$('helpBackBtn').onclick=()=>{
-  $('helpScreen').classList.add('hidden');
-  $('startScreen').classList.remove('hidden');
+_$('helpBackBtn').onclick=()=>{
+  _$('helpScreen').classList.add('hidden');
+  _$('startScreen').classList.remove('hidden');
 };
-$('menuBtn').onclick=()=>{
-  $('endScreen').classList.add('hidden');
+_$('menuBtn').onclick=()=>{
+  _$('endScreen').classList.add('hidden');
   renderStartRank();
-  $('startScreen').classList.remove('hidden');
+  _$('startScreen').classList.remove('hidden');
 };
 
 const KEYMAP={arrowup:{x:0,y:-1},w:{x:0,y:-1},arrowdown:{x:0,y:1},s:{x:0,y:1},arrowleft:{x:-1,y:0},a:{x:-1,y:0},arrowright:{x:1,y:0},d:{x:1,y:0}};
@@ -715,7 +719,7 @@ async function saveRank(name,ms){
   return{list:list,entry:{name:name,ms:ms}};
 }
 function renderRank(list,entry){
-  const el=$('rankList');el.innerHTML='';
+  const el=_$('rankList');el.innerHTML='';
   list.slice(0,10).forEach((r,i)=>{
     const li=document.createElement('li');
     if(entry&&r.name===entry.name&&r.ms===entry.ms)li.className='me';
@@ -725,16 +729,16 @@ function renderRank(list,entry){
 }
 async function renderStartRank(){
   const r=await getRank();
-  if(!r.length){$('startRank').innerHTML='';return;}
+  if(!r.length){_$('startRank').innerHTML='';return;}
   let h='<div style="margin-top:8px">— MEJORES TIEMPOS GLOBALES —<br>';
   r.slice(0,10).forEach((x,i)=>{h+=(i+1)+'. '+escapeHtml(x.name)+' · '+fmt(x.ms)+'<br>';});
   h+='<a href="ranking.html" style="color:#a77;text-decoration:none;font-size:12px;letter-spacing:1px">[ VER RANKING COMPLETO ]</a>';
-  $('startRank').innerHTML=h+'</div>';
+  _$('startRank').innerHTML=h+'</div>';
 }
 renderStartRank();
 
 function makeStars(){
-  const box=$('stars');box.innerHTML='';
+  const box=_$('stars');box.innerHTML='';
   for(let i=0;i<90;i++){
     const s=document.createElement('span');
     const sz=(Math.random()*2+1);
@@ -750,6 +754,11 @@ function makeStars(){
 function startLevel(){
   N=LEVELS[level];maze=genMaze(N);goal={x:N-1,y:N-1};
   initCerbero();
+  // Mostrar warning de Cerbero solo la primera vez que aparece en la partida
+  if(level>=CERBERO_MIN_LEVEL&&!cerberoWarned){
+    cerberoWarned=true;
+    showCerberoWarning();
+  }
   player={cx:1,cy:1,x:1,y:1,tx:1,ty:1,lerp:1};
   flareUntil=0;flareBoost=0;
   spawnItems();
@@ -761,17 +770,16 @@ function startGame(){
   running=true;
   SFX.init();SFX.resume();
   startLevel();
-  $('startScreen').classList.add('hidden');
-  $('helpScreen').classList.add('hidden');
-  $('endScreen').classList.add('hidden');
-  $('pauseScreen').classList.add('hidden');
-  $('byeScreen').classList.add('hidden');
-  $('hud').classList.remove('hidden');
-  if(DEBUG)$('hud').innerHTML+='<div style="position:fixed;top:60px;right:20px;color:#f60;font-size:12px;letter-spacing:2px">[DEBUG NIVEL '+DEBUG_LEVEL+']</div>';
+  _$('startScreen').classList.add('hidden');
+  _$('helpScreen').classList.add('hidden');
+  _$('endScreen').classList.add('hidden');
+  _$('pauseScreen').classList.add('hidden');
+  _$('byeScreen').classList.add('hidden');
+  _$('hud').classList.remove('hidden');
+  if(DEBUG)_$('hud').innerHTML+='<div style="position:fixed;top:60px;right:20px;color:#f60;font-size:12px;letter-spacing:2px">[DEBUG NIVEL '+DEBUG_LEVEL+']</div>';
 }
 function completeLevel(){
   totalMs+=mazeTime;flash=1;SFX.stinger();
-  if(level+1>=CERBERO_MIN_LEVEL)showCerberoWarning();
   if(mazeTime<parMs(N))speedBonus=Math.min(1,speedBonus+0.34);
   else speedBonus=Math.max(0,speedBonus-0.2);
   level++;
@@ -782,43 +790,43 @@ function win(){
   running=false;finalTime=totalMs;
   SFX.boom();setTimeout(()=>SFX.chime(),900);
   makeStars();
-  $('endScreen').classList.add('stars');
-  $('verse').classList.remove('hidden');
-  $('endTitle').textContent='A VER DE NUEVO LAS ESTRELLAS';
-  $('endTime').innerHTML='Tiempo en el Infierno: <b style="color:#9cf">'+fmt(finalTime)+'</b>';
-  $('signBox').classList.remove('hidden');
-  $('rankBox').classList.add('hidden');
-  $('hud').classList.add('hidden');
-  $('endScreen').classList.remove('hidden');
-  setTimeout(()=>$('nameInput').focus(),150);
+  _$('endScreen').classList.add('stars');
+  _$('verse').classList.remove('hidden');
+  _$('endTitle').textContent='A VER DE NUEVO LAS ESTRELLAS';
+  _$('endTime').innerHTML='Tiempo en el Infierno: <b style="color:#9cf">'+fmt(finalTime)+'</b>';
+  _$('signBox').classList.remove('hidden');
+  _$('rankBox').classList.add('hidden');
+  _$('hud').classList.add('hidden');
+  _$('endScreen').classList.remove('hidden');
+  setTimeout(()=>_$('nameInput').focus(),150);
 }
-$('startBtn').onclick=startGame;
-$('againBtn').onclick=startGame;
-$('signBtn').onclick=async()=>{
-  const name=($('nameInput').value.trim()||'ANÓNIMO').toUpperCase();
+_$('startBtn').onclick=startGame;
+_$('againBtn').onclick=startGame;
+_$('signBtn').onclick=async()=>{
+  const name=(_$('nameInput').value.trim()||'ANÓNIMO').toUpperCase();
   const res=await saveRank(name,Math.round(finalTime));
   renderRank(res.list,res.entry);
-  $('signBox').classList.add('hidden');
-  $('rankBox').classList.remove('hidden');
+  _$('signBox').classList.add('hidden');
+  _$('rankBox').classList.remove('hidden');
 };
-$('nameInput').addEventListener('keydown',e=>{
+_$('nameInput').addEventListener('keydown',e=>{
   e.stopPropagation();
-  if(e.key==='Enter')$('signBtn').click();
+  if(e.key==='Enter')_$('signBtn').click();
 });
 
 function loop(t){
-  moveCerbero();
   const dt=Math.min(0.05,lastT?(t-lastT)/1000:0);lastT=t;dtLast=dt;
+  moveCerbero(dt);
   update(dt);draw(t);
   if(running&&!paused){
-    $('mazeTime').textContent=fmt(mazeTime);
-    $('totalTime').textContent='TOTAL '+fmt(totalMs+mazeTime);
-    $('levelLabel').textContent=levelName(level);
+    _$('mazeTime').textContent=fmt(mazeTime);
+    _$('totalTime').textContent='TOTAL '+fmt(totalMs+mazeTime);
+    _$('levelLabel').textContent=levelName(level);
     if(flareActive()){
       const icon=flareBoost>1.5?'🔥':'🕯️';
-      $('flareHud').textContent=icon+' '+Math.ceil((flareUntil-performance.now())/1000)+'s';
+      _$('flareHud').textContent=icon+' '+Math.ceil((flareUntil-performance.now())/1000)+'s';
     }else{
-      $('flareHud').textContent='';
+      _$('flareHud').textContent='';
     }
   }
   requestAnimationFrame(loop);
