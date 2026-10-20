@@ -208,20 +208,26 @@ addEventListener('resize',resize);resize();
 
 function initCerbero(){
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;return;}
+  console.log('[CERBERO] initCerbero - level:',level,'DEBUG:',DEBUG,'DEBUG_DISPLAY_LEVEL:',DEBUG_DISPLAY_LEVEL,'effectiveLevel:',effectiveLevel,'CERBERO_MIN_LEVEL:',CERBERO_MIN_LEVEL);
+  if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;console.log('[CERBERO] No spawn - nivel bajo');return;}
   // Spawn en esquina opuesta al jugador
   cerbero={x:N-2,y:1,px:N-2,py:1,moveCooldown:0};
+  console.log('[CERBERO] Spawned en',cerbero.x,cerbero.y);
 }
 
 function moveCerbero(dt){
-  if(!cerbero||!running||paused)return;
+  if(!cerbero){console.log('[CERBERO] moveCerbero - cerbero es null');return;}
+  if(!running){console.log('[CERBERO] moveCerbero - not running');return;}
+  if(paused){console.log('[CERBERO] moveCerbero - paused');return;}
   
   // Cooldown entre movimientos (más rápido en niveles altos)
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
   const cooldown=Math.max(300,800-(effectiveLevel*50));
   cerbero.moveCooldown-=dt;
+  console.log('[CERBERO] moveCooldown:',cerbero.moveCooldown,'dt:',dt);
   if(cerbero.moveCooldown>0)return;
   cerbero.moveCooldown=cooldown;
+  console.log('[CERBERO] Moving!');
   
   // Movimiento greedy hacia el jugador
   const dx=player.cx-cerbero.x,dy=player.cy-cerbero.y;
@@ -283,8 +289,10 @@ function drawCerbero(t){
 
 function showCerberoWarning(){
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  if(cerberoWarned||effectiveLevel<CERBERO_MIN_LEVEL)return;
+  console.log('[CERBERO] showCerberoWarning - effectiveLevel:',effectiveLevel,'cerberoWarned:',cerberoWarned);
+  if(cerberoWarned||effectiveLevel<CERBERO_MIN_LEVEL){console.log('[CERBERO] Warning skipped');return;}
   cerberoWarned=true;
+  console.log('[CERBERO] Showing warning!');
   const warn=document.createElement('div');
   warn.id='cerberoWarn';
   warn.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#f00;font-size:32px;font-family:Nosifer,cursive;text-shadow:0 0 20px #f00,0 0 40px #800;z-index:100;animation:cerberoFade 3s forwards;pointer-events:none';
