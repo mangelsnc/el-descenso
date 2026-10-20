@@ -282,7 +282,8 @@ function drawCerbero(t){
 }
 
 function showCerberoWarning(){
-  if(cerberoWarned||level<CERBERO_MIN_LEVEL)return;
+  const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
+  if(cerberoWarned||effectiveLevel<CERBERO_MIN_LEVEL)return;
   cerberoWarned=true;
   const warn=document.createElement('div');
   warn.id='cerberoWarn';
