@@ -766,7 +766,7 @@ function startLevel(){
   SFX.setLevel(level);
 }
 function startGame(){
-  level=0;totalMs=0;flash=0;paused=false;speedBonus=0;
+  level=DEBUG_START_LEVEL;totalMs=0;flash=0;paused=false;speedBonus=0;
   running=true;
   SFX.init();SFX.resume();
   startLevel();
