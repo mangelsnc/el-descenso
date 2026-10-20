@@ -217,7 +217,8 @@ function moveCerbero(dt){
   if(!cerbero||!running||paused)return;
   
   // Cooldown entre movimientos (más rápido en niveles altos)
-  const cooldown=Math.max(300,800-(level*50));
+  const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
+  const cooldown=Math.max(300,800-(effectiveLevel*50));
   cerbero.moveCooldown-=dt;
   if(cerbero.moveCooldown>0)return;
   cerbero.moveCooldown=cooldown;
