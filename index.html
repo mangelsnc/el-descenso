@@ -167,16 +167,21 @@ const DEBUG_PARAM=new URLSearchParams(location.search).get('debug');
 const DEBUG=DEBUG_PARAM!==null;
 const DEBUG_LEVEL=DEBUG?Math.min(10,Math.max(1,parseInt(DEBUG_PARAM)||1)):0;
 let DEBUG_START_LEVEL=0;
+let DEBUG_DISPLAY_LEVEL=0;
 if(DEBUG){
   // Crear array con un solo nivel: el seleccionado
   const selectedSize=LEVELS[DEBUG_LEVEL-1];
   LEVELS.length=0;
   LEVELS.push(selectedSize);
-  DEBUG_START_LEVEL=DEBUG_LEVEL-1; // level empieza en 0
+  DEBUG_START_LEVEL=0; // level es 0 porque LEVELS solo tiene un elemento
+  DEBUG_DISPLAY_LEVEL=DEBUG_LEVEL-1; // nivel real para mostrar en título
 }
 const ROMAN=['I','II','III','IV','V','VI','VII','VIII','IX'];
 const CIRCLE_NAMES=['LIMBO','LUJURIA','GULA','AVARICIA','IRA','HEREJÍA','VIOLENCIA','FRAUDE','TRAICIÓN'];
-function levelName(i){return i===0?'LA PUERTA':'CÍRCULO '+ROMAN[i-1]+' · '+CIRCLE_NAMES[i-1];}
+function levelName(i){
+  if(DEBUG)return DEBUG_DISPLAY_LEVEL===0?'LA PUERTA':'CÍRCULO '+ROMAN[DEBUG_DISPLAY_LEVEL-1]+' · '+CIRCLE_NAMES[DEBUG_DISPLAY_LEVEL-1];
+  return i===0?'LA PUERTA':'CÍRCULO '+ROMAN[i-1]+' · '+CIRCLE_NAMES[i-1];
+}
 const FLARE_MS=12000, FLARE_BOOST=1.9;
 const FLARE_MIN_LEVEL=4;
 const EXT_MIN_LEVEL=6;
@@ -202,7 +207,8 @@ function resize(){
 addEventListener('resize',resize);resize();
 
 function initCerbero(){
-  if(level<CERBERO_MIN_LEVEL){cerbero=null;return;}
+  const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
+  if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;return;}
   // Spawn en esquina opuesta al jugador
   cerbero={x:N-2,y:1,px:N-2,py:1,moveCooldown:0};
 }
@@ -755,7 +761,8 @@ function startLevel(){
   N=LEVELS[level];maze=genMaze(N);goal={x:N-1,y:N-1};
   initCerbero();
   // Mostrar warning de Cerbero solo la primera vez que aparece en la partida
-  if(level>=CERBERO_MIN_LEVEL&&!cerberoWarned){
+  const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
+  if(effectiveLevel>=CERBERO_MIN_LEVEL&&!cerberoWarned){
     cerberoWarned=true;
     showCerberoWarning();
   }
