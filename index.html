@@ -286,11 +286,6 @@ function drawCerbero(t){
 }
 
 function showCerberoWarning(){
-  const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  console.log('[CERBERO] showCerberoWarning - effectiveLevel:',effectiveLevel,'cerberoWarned:',cerberoWarned);
-  if(cerberoWarned||effectiveLevel<CERBERO_MIN_LEVEL){console.log('[CERBERO] Warning skipped');return;}
-  cerberoWarned=true;
-  console.log('[CERBERO] Showing warning!');
   const warn=document.createElement('div');
   warn.id='cerberoWarn';
   warn.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#f00;font-size:32px;font-family:Nosifer,cursive;text-shadow:0 0 20px #f00,0 0 40px #800;z-index:100;animation:cerberoFade 3s forwards;pointer-events:none';
