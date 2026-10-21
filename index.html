@@ -539,10 +539,10 @@ const SFX={
       [880,1108,1320].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f3);o.start();});
       f3.connect(this.highGain);this.highGain.connect(this.master);
       
-      // Capa esperanza: quinto armónico luminoso (solo con luz)
+      // Capa esperanza: quinto armónico cálido (solo con luz)
       this.hopeGain=C.createGain();this.hopeGain.gain.value=0;
-      const f4=C.createBiquadFilter();f4.type='bandpass';f4.frequency.value=660;f4.Q.value=4;
-      [660,990,1320].forEach(fr=>{const o=C.createOscillator();o.type='triangle';o.frequency.value=fr;o.connect(f4);o.start();});
+      const f4=C.createBiquadFilter();f4.type='lowpass';f4.frequency.value=440;f4.Q.value=2;
+      [220,330,440].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f4);o.start();});
       f4.connect(this.hopeGain);this.hopeGain.connect(this.master);
       
       // Latido
