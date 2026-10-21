@@ -545,6 +545,18 @@ const SFX={
       [220,330,440].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f4);o.start();});
       f4.connect(this.hopeGain);this.hopeGain.connect(this.master);
       
+      // Capa percusión: timpani (nivel 6+)
+      this.percGain=C.createGain();this.percGain.gain.value=0;
+      const f5=C.createBiquadFilter();f5.type='lowpass';f5.frequency.value=150;
+      [55,82.5].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f5);o.start();});
+      f5.connect(this.percGain);this.percGain.connect(this.master);
+      
+      // Capa épica: coro disonante (nivel 10)
+      this.epicGain=C.createGain();this.epicGain.gain.value=0;
+      const f6=C.createBiquadFilter();f6.type='bandpass';f6.frequency.value=220;f6.Q.value=1;
+      [110,220,277,330,440].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f6);o.start();});
+      f6.connect(this.epicGain);this.epicGain.connect(this.master);
+      
       // Latido
       const beat=()=>{this.thump();setTimeout(beat,this.heartMs);};
       beat();
@@ -562,6 +574,8 @@ const SFX={
     // Ajustar capas según nivel
     if(this.midGain)this.midGain.gain.value=l>=3?0.08:0;
     if(this.highGain)this.highGain.gain.value=0; // Desactivada - demasiado estridente
+    if(this.percGain)this.percGain.gain.value=l>=6?0.12:0;
+    if(this.epicGain)this.epicGain.gain.value=l>=10?0.15:0;
   },
   setHope(active){
     // Capa de esperanza: suave fade in/out
