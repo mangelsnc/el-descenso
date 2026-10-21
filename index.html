@@ -560,13 +560,13 @@ const SFX={
     this.baseHeartMs=Math.max(320,950-l*65);
     this.heartMs=this.baseHeartMs;
     // Ajustar capas según nivel
-    if(this.midGain)this.midGain.gain.value=l>=3?0.03:0;
-    if(this.highGain)this.highGain.gain.value=l>=6?0.02:0;
+    if(this.midGain)this.midGain.gain.value=l>=3?0.08:0;
+    if(this.highGain)this.highGain.gain.value=l>=6?0.06:0;
   },
   setHope(active){
     // Capa de esperanza: suave fade in/out
     if(this.hopeGain){
-      const target=active?0.025:0;
+      const target=active?0.08:0;
       this.hopeGain.gain.linearRampToValueAtTime(target,this.ctx.currentTime+0.8);
     }
   },
