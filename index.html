@@ -208,56 +208,82 @@ addEventListener('resize',resize);resize();
 
 function initCerbero(){
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  console.log('[CERBERO] initCerbero - level:',level,'DEBUG:',DEBUG,'DEBUG_DISPLAY_LEVEL:',DEBUG_DISPLAY_LEVEL,'effectiveLevel:',effectiveLevel,'CERBERO_MIN_LEVEL:',CERBERO_MIN_LEVEL);
-  if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;console.log('[CERBERO] No spawn - nivel bajo');return;}
+  if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;return;}
   // Spawn en esquina opuesta al jugador
-  cerbero={x:N-2,y:1,px:N-2,py:1,moveCooldown:0};
-  console.log('[CERBERO] Spawned en',cerbero.x,cerbero.y);
+  cerbero={x:N-2,y:1,moveCooldown:0};
+}
+
+function heuristic(ax,ay,bx,by){
+  // Distancia Manhattan
+  return Math.abs(ax-bx)+Math.abs(ay-by);
+}
+
+function findPath(startX,startY,targetX,targetY){
+  const open=[{x:startX,y:startY,g:0,f:heuristic(startX,startY,targetX,targetY),parent:null}];
+  const closed=new Set();
+  const gScore=new Map();
+  gScore.set(startX+','+startY,0);
+  
+  while(open.length){
+    // Ordenar por f y coger el menor
+    open.sort((a,b)=>a.f-b.f);
+    const current=open.shift();
+    const key=current.x+','+current.y;
+    
+    if(current.x===targetX&&current.y===targetY){
+      // Reconstruir camino
+      const path=[];
+      let node=current;
+      while(node.parent){
+        path.unshift({x:node.x,y:node.y});
+        node=node.parent;
+      }
+      return path;
+    }
+    
+    closed.add(key);
+    
+    // Vecinos
+    const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+    for(const d of dirs){
+      const nx=current.x+d[0],ny=current.y+d[1];
+      const nKey=nx+','+ny;
+      
+      if(nx<0||ny<0||nx>=N||ny>=N)continue;
+      if(maze[ny][nx]!==0)continue;
+      if(closed.has(nKey))continue;
+      
+      const tentativeG=current.g+1;
+      const existingG=gScore.get(nKey);
+      
+      if(existingG===undefined||tentativeG<existingG){
+        gScore.set(nKey,tentativeG);
+        const f=tentativeG+heuristic(nx,ny,targetX,targetY);
+        open.push({x:nx,y:ny,g:tentativeG,f:f,parent:current});
+      }
+    }
+  }
+  return null; // No hay camino
 }
 
 function moveCerbero(dt){
-  if(!cerbero){console.log('[CERBERO] moveCerbero - cerbero es null');return;}
-  if(!running){console.log('[CERBERO] moveCerbero - not running');return;}
-  if(paused){console.log('[CERBERO] moveCerbero - paused');return;}
+  if(!cerbero||!running||paused)return;
   
   // Cooldown entre movimientos (más rápido en niveles altos)
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  const cooldown=Math.max(0.3,0.8-(effectiveLevel*0.05)); // segundos
+  const cooldown=Math.max(0.15,0.6-(effectiveLevel*0.04)); // segundos - más rápido
   cerbero.moveCooldown-=dt;
   if(cerbero.moveCooldown>0)return;
   cerbero.moveCooldown=cooldown;
   
-  // Movimiento greedy hacia el jugador
-  const dx=player.cx-cerbero.x,dy=player.cy-cerbero.y;
-  let moved=false;
+  // A* pathfinding hacia el jugador
+  const path=findPath(cerbero.x,cerbero.y,player.cx,player.cy);
   
-  // Intentar moverse hacia el jugador
-  if(Math.abs(dx)>Math.abs(dy)){
-    // Prioridad horizontal
-    if(dx>0&&maze[cerbero.y][cerbero.x+1]===0){cerbero.x++;moved=true;}
-    else if(dx<0&&maze[cerbero.y][cerbero.x-1]===0){cerbero.x--;moved=true;}
-    else if(dy>0&&maze[cerbero.y+1][cerbero.x]===0){cerbero.y++;moved=true;}
-    else if(dy<0&&maze[cerbero.y-1][cerbero.x]===0){cerbero.y--;moved=true;}
-  }else{
-    // Prioridad vertical
-    if(dy>0&&maze[cerbero.y+1][cerbero.x]===0){cerbero.y++;moved=true;}
-    else if(dy<0&&maze[cerbero.y-1][cerbero.x]===0){cerbero.y--;moved=true;}
-    else if(dx>0&&maze[cerbero.y][cerbero.x+1]===0){cerbero.x++;moved=true;}
-    else if(dx<0&&maze[cerbero.y][cerbero.x-1]===0){cerbero.x--;moved=true;}
-  }
-  
-  // Si no pudo moverse hacia el jugador, movimiento aleatorio
-  if(!moved){
-    const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
-    const valid=[];
-    for(const d of dirs){
-      const nx=cerbero.x+d[0],ny=cerbero.y+d[1];
-      if(maze[ny]&&maze[ny][nx]===0)valid.push(d);
-    }
-    if(valid.length){
-      const d=valid[(Math.random()*valid.length)|0];
-      cerbero.x+=d[0];cerbero.y+=d[1];
-    }
+  if(path&&path.length>0){
+    // Moverse al siguiente paso del camino
+    const next=path[0];
+    cerbero.x=next.x;
+    cerbero.y=next.y;
   }
   
   // Colisión simple: si está en la misma celda que el jugador, muerte
