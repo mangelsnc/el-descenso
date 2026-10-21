@@ -561,7 +561,7 @@ const SFX={
     this.heartMs=this.baseHeartMs;
     // Ajustar capas según nivel
     if(this.midGain)this.midGain.gain.value=l>=3?0.08:0;
-    if(this.highGain)this.highGain.gain.value=l>=6?0.06:0;
+    if(this.highGain)this.highGain.gain.value=0; // Desactivada - demasiado estridente
   },
   setHope(active){
     // Capa de esperanza: suave fade in/out
