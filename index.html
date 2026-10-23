@@ -327,8 +327,8 @@ let spritesLoaded=0;
 spriteNames.forEach(name=>{
   const img=new Image();
   img.src='sprites/cerbero-'+name+'.png';
-  img.onload=()=>spritesLoaded++;
-  cerberoSprites[name]=img;
+  img.onload=()=>{spritesLoaded++;cerberoSprites[name].loaded=true;};
+  cerberoSprites[name]={img:img,loaded:false};
 });
 
 function drawCerbero(t){
@@ -351,15 +351,15 @@ function drawCerbero(t){
   }
   const state=(Math.abs(cerbero.vx)>0.01||Math.abs(cerbero.vy)>0.01)?'run':'idle';
   const spriteName='cerbero-'+dir+'-'+state;
-  const sprite=cerberoSprites[spriteName];
+  const spriteData=cerberoSprites[spriteName];
   
   ctx.save();
   ctx.shadowColor='#ff0000';
   ctx.shadowBlur=20*pulse;
   
-  if(sprite&&sprite.complete){
+  if(spriteData&&spriteData.loaded){
     // Dibujar sprite
-    ctx.drawImage(sprite,cxp-size/2,cyp-size/2,size,size);
+    ctx.drawImage(spriteData.img,cxp-size/2,cyp-size/2,size,size);
   }else{
     // Fallback: emoji
     ctx.font=Math.max(16,size)+'px serif';
