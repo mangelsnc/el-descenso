@@ -271,7 +271,13 @@ function moveCerbero(dt){
   
   // Velocidad lineal (celdas por segundo) - más rápido en niveles altos
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  const speed=Math.max(1.5, 3.5-(effectiveLevel*0.2)); // celdas/segundo
+  let speed=Math.max(1.5, 3.5-(effectiveLevel*0.2)); // celdas/segundo
+  
+  // Si el jugador tiene luz, Cerbero huye (más lento y dirección contraria)
+  const hasLight=flareActive();
+  if(hasLight){
+    speed*=0.5; // Más lento huyendo
+  }
   
   // A* pathfinding hacia el jugador (usar posición redondeada)
   const cx=Math.round(cerbero.x),cy=Math.round(cerbero.y);
@@ -280,11 +286,16 @@ function moveCerbero(dt){
   if(path&&path.length>0){
     // Objetivo: siguiente paso del camino
     const target=path[0];
-    const dx=target.x-cerbero.x;
-    const dy=target.y-cerbero.y;
+    let dx=target.x-cerbero.x;
+    let dy=target.y-cerbero.y;
     const dist=Math.sqrt(dx*dx+dy*dy);
     
     if(dist>0.01){
+      // Si tiene luz, invertir dirección (huir)
+      if(hasLight){
+        dx=-dx;
+        dy=-dy;
+      }
       // Movimiento lineal suave
       const move=speed*dt;
       cerbero.x+=dx/dist*move;
@@ -292,11 +303,11 @@ function moveCerbero(dt){
     }
   }
   
-  // Colisión: si está muy cerca del jugador, muerte
+  // Colisión: si está muy cerca del jugador, muerte (solo si no tiene luz)
   const pdx=cerbero.x-player.cx;
   const pdy=cerbero.y-player.cy;
   const pdist=Math.sqrt(pdx*pdx+pdy*pdy);
-  if(pdist<0.5){
+  if(pdist<0.5&&!hasLight){
     flash=1;SFX.stinger();
     startLevel();
     return;
