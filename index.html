@@ -326,7 +326,7 @@ const spriteNames=['up-idle','up-run','down-idle','down-run','left-idle','left-r
 let spritesLoaded=0;
 spriteNames.forEach(name=>{
   const img=new Image();
-  img.src='sprites/cerbero-'+name+'.png';
+  img.src='sprites/cerbero-'+name+'.png?v='+Date.now();
   img.onload=()=>{spritesLoaded++;cerberoSprites[name].loaded=true;};
   cerberoSprites[name]={img:img,loaded:false};
 });
