@@ -309,7 +309,10 @@ function moveCerbero(dt){
   const pdist=Math.sqrt(pdx*pdx+pdy*pdy);
   if(pdist<0.5&&!hasLight){
     flash=1;SFX.stinger();
+    // Guardar tiempo acumulado antes de reiniciar
+    const savedTime=mazeTime;
     startLevel();
+    mazeTime=savedTime; // Restaurar tiempo acumulado
     return;
   }
 }
@@ -323,82 +326,11 @@ function drawCerbero(t){
   if(d>lightR*2)return; // Solo visible cerca del jugador
   
   const pulse=1+Math.sin(t*0.008)*0.15;
-  const breathe=1+Math.sin(t*0.02)*0.08; // Respiración agitada
-  const size=cellPx*0.45*pulse*breathe;
-  
   ctx.save();
-  ctx.translate(cxp,cyp);
-  
-  // Cuerpo del perro (forma alargada)
-  ctx.shadowColor='#000';ctx.shadowBlur=12;
-  ctx.fillStyle='#0a0a0a';
-  ctx.beginPath();
-  ctx.ellipse(0,0,size*1.2,size*0.7,0,0,6.2832);
-  ctx.fill();
-  
-  // Cabeza (más pequeña, adelante)
-  const headX=size*0.8;
-  ctx.beginPath();
-  ctx.ellipse(headX,-size*0.2,size*0.5,size*0.4,0,0,6.2832);
-  ctx.fill();
-  
-  // Orejas puntiagudas
-  ctx.beginPath();
-  ctx.moveTo(headX-size*0.2,-size*0.5);
-  ctx.lineTo(headX-size*0.35,-size*0.9);
-  ctx.lineTo(headX-size*0.1,-size*0.6);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(headX+size*0.2,-size*0.5);
-  ctx.lineTo(headX+size*0.35,-size*0.9);
-  ctx.lineTo(headX+size*0.1,-size*0.6);
-  ctx.fill();
-  
-  // Ojos rojos enloquecidos (más grandes, brillantes, desiguales)
   ctx.shadowColor='#ff0000';ctx.shadowBlur=20*pulse;
-  ctx.fillStyle='#ff0000';
-  // Ojo izquierdo - más grande, desorbitado
-  ctx.beginPath();
-  ctx.arc(headX-size*0.15,-size*0.25,Math.max(3,cellPx*0.08*pulse),0,6.2832);
-  ctx.fill();
-  // Ojo derecho - más pequeño, entrecerrado
-  ctx.beginPath();
-  ctx.arc(headX+size*0.2,-size*0.2,Math.max(2,cellPx*0.05),0,6.2832);
-  ctx.fill();
-  
-  // Pupilas blancas (brillo enloquecido)
-  ctx.shadowColor='#fff';ctx.shadowBlur=5;
-  ctx.fillStyle='#fff';
-  ctx.beginPath();
-  ctx.arc(headX-size*0.15,-size*0.25,Math.max(1,cellPx*0.02),0,6.2832);
-  ctx.fill();
-  
-  // Boca abierta con dientes
-  ctx.shadowColor='#000';ctx.shadowBlur=3;
-  ctx.fillStyle='#1a0000';
-  ctx.beginPath();
-  ctx.ellipse(headX+size*0.1,size*0.1,size*0.25,size*0.15,0,0,6.2832);
-  ctx.fill();
-  // Dientes superiores
-  ctx.fillStyle='#fff';
-  for(let i=0;i<3;i++){
-    ctx.beginPath();
-    ctx.moveTo(headX+size*0.05+i*size*0.08,size*0.02);
-    ctx.lineTo(headX+size*0.08+i*size*0.08,size*0.12);
-    ctx.lineTo(headX+size*0.11+i*size*0.08,size*0.02);
-    ctx.fill();
-  }
-  
-  // Patas delanteras (movimiento de carrera)
-  const legMove=Math.sin(t*0.03)*size*0.2;
-  ctx.fillStyle='#0a0a0a';
-  ctx.beginPath();
-  ctx.ellipse(headX-size*0.3,size*0.4+legMove,size*0.15,size*0.35,0.3,0,6.2832);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(headX+size*0.1,size*0.4-legMove,size*0.15,size*0.35,-0.3,0,6.2832);
-  ctx.fill();
-  
+  ctx.font=Math.max(16,cellPx*1.5*pulse)+'px serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('🐺',cxp,cyp);
   ctx.restore();
 }
 
@@ -951,7 +883,8 @@ function startLevel(){
   player={cx:1,cy:1,x:1,y:1,tx:1,ty:1,lerp:1};
   flareUntil=0;flareBoost=0;
   spawnItems();
-  mazeStart=performance.now();mazeTime=0;
+  // No reiniciar mazeTime - el tiempo se acumula entre intentos
+  if(mazeTime===0)mazeStart=performance.now();
   SFX.setLevel(DEBUG?DEBUG_DISPLAY_LEVEL:level);
 }
 function startGame(){
