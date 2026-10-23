@@ -210,7 +210,7 @@ function initCerbero(){
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
   if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;return;}
   // Spawn en esquina opuesta al jugador
-  cerbero={x:N-2,y:1,moveCooldown:0};
+  cerbero={x:N-2,y:1,vx:0,vy:0,moveCooldown:0};
 }
 
 function heuristic(ax,ay,bx,by){
@@ -300,6 +300,9 @@ function moveCerbero(dt){
       const move=speed*dt;
       cerbero.x+=dx/dist*move;
       cerbero.y+=dy/dist*move;
+      // Guardar velocidad para sprite
+      cerbero.vx=dx/dist*speed;
+      cerbero.vy=dy/dist*speed;
     }
   }
   
@@ -317,11 +320,16 @@ function moveCerbero(dt){
   }
 }
 
-// Cargar sprite de Cerbero
-const cerberoImg=new Image();
-cerberoImg.src='cerbero.png';
-let cerberoImgLoaded=false;
-cerberoImg.onload=()=>cerberoImgLoaded=true;
+// Cargar sprites de Cerbero (8 direcciones x 2 estados)
+const cerberoSprites={};
+const spriteNames=['up-idle','up-run','down-idle','down-run','left-idle','left-run','right-idle','right-run'];
+let spritesLoaded=0;
+spriteNames.forEach(name=>{
+  const img=new Image();
+  img.src='sprites/cerbero-'+name+'.png';
+  img.onload=()=>spritesLoaded++;
+  cerberoSprites[name]=img;
+});
 
 function drawCerbero(t){
   if(!cerbero)return;
@@ -334,13 +342,24 @@ function drawCerbero(t){
   const pulse=1+Math.sin(t*0.008)*0.15;
   const size=cellPx*1.2*pulse;
   
+  // Determinar dirección y estado
+  let dir='down';
+  if(Math.abs(cerbero.vx)>Math.abs(cerbero.vy)){
+    dir=cerbero.vx>0?'right':'left';
+  }else if(Math.abs(cerbero.vy)>0.01){
+    dir=cerbero.vy>0?'down':'up';
+  }
+  const state=(Math.abs(cerbero.vx)>0.01||Math.abs(cerbero.vy)>0.01)?'run':'idle';
+  const spriteName='cerbero-'+dir+'-'+state;
+  const sprite=cerberoSprites[spriteName];
+  
   ctx.save();
   ctx.shadowColor='#ff0000';
   ctx.shadowBlur=20*pulse;
   
-  if(cerberoImgLoaded){
+  if(sprite&&sprite.complete){
     // Dibujar sprite
-    ctx.drawImage(cerberoImg,cxp-size/2,cyp-size/2,size,size);
+    ctx.drawImage(sprite,cxp-size/2,cyp-size/2,size,size);
   }else{
     // Fallback: emoji
     ctx.font=Math.max(16,size)+'px serif';
