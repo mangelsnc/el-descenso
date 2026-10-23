@@ -317,6 +317,12 @@ function moveCerbero(dt){
   }
 }
 
+// Cargar sprite de Cerbero
+const cerberoImg=new Image();
+cerberoImg.src='cerbero.png';
+let cerberoImgLoaded=false;
+cerberoImg.onload=()=>cerberoImgLoaded=true;
+
 function drawCerbero(t){
   if(!cerbero)return;
   const cxp=(cerbero.x+0.5)*cellPx,cyp=(cerbero.y+0.5)*cellPx;
@@ -326,11 +332,21 @@ function drawCerbero(t){
   if(d>lightR*2)return; // Solo visible cerca del jugador
   
   const pulse=1+Math.sin(t*0.008)*0.15;
+  const size=cellPx*1.2*pulse;
+  
   ctx.save();
-  ctx.shadowColor='#ff0000';ctx.shadowBlur=20*pulse;
-  ctx.font=Math.max(16,cellPx*1.5*pulse)+'px serif';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('🐺',cxp,cyp);
+  ctx.shadowColor='#ff0000';
+  ctx.shadowBlur=20*pulse;
+  
+  if(cerberoImgLoaded){
+    // Dibujar sprite
+    ctx.drawImage(cerberoImg,cxp-size/2,cyp-size/2,size,size);
+  }else{
+    // Fallback: emoji
+    ctx.font=Math.max(16,size)+'px serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🐺',cxp,cyp);
+  }
   ctx.restore();
 }
 
