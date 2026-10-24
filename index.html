@@ -359,10 +359,12 @@ function drawCerbero(t){
   try{
     if(sprite&&sprite.complete&&sprite.naturalWidth>0){
       ctx.drawImage(sprite,cxp-size/2,cyp-size/2,size,size);
+      if(!window._cerberoSpriteLogged){console.log('Sprite dibujado:',spriteName);window._cerberoSpriteLogged=true;}
     }else{
-      throw new Error('not loaded');
+      throw new Error('not loaded: '+spriteName+' complete='+sprite?.complete+' naturalWidth='+sprite?.naturalWidth);
     }
   }catch(e){
+    if(!window._cerberoEmojiLogged){console.log('Emoji fallback:',e.message);window._cerberoEmojiLogged=true;}
     ctx.font=Math.max(16,size)+'px serif';
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('🐺',cxp,cyp);
