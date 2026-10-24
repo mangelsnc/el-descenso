@@ -296,10 +296,15 @@ function moveCerbero(dt){
         dx=-dx;
         dy=-dy;
       }
-      // Movimiento lineal suave
-      const move=speed*dt;
-      cerbero.x+=dx/dist*move;
-      cerbero.y+=dy/dist*move;
+      // Movimiento lineal suave — clamp al waypoint para no cortar esquinas
+      const move=Math.min(speed*dt,dist);
+      const nxp=cerbero.x+dx/dist*move,nyp=cerbero.y+dy/dist*move;
+      // No atravesar paredes: comprobar la celda destino (con margen de radio)
+      const r=0.3;
+      const wallAt=(px,py)=>{const mx=Math.floor(px),my=Math.floor(py);return !maze[my]||maze[my][mx]!==0;};
+      if(!wallAt(nxp+Math.sign(dx)*r,nyp+Math.sign(dy)*r)){cerbero.x=nxp;cerbero.y=nyp;}
+      else if(!wallAt(nxp+Math.sign(dx)*r,cerbero.y)){cerbero.x=nxp;} // desliza en X
+      else if(!wallAt(cerbero.x,nyp+Math.sign(dy)*r)){cerbero.y=nyp;} // desliza en Y
       // Guardar velocidad para sprite
       cerbero.vx=dx/dist*speed;
       cerbero.vy=dy/dist*speed;
@@ -307,10 +312,10 @@ function moveCerbero(dt){
   }
   
   // Colisión: si está muy cerca del jugador, muerte (solo si no tiene luz)
-  const pdx=cerbero.x-player.cx;
-  const pdy=cerbero.y-player.cy;
+  const pdx=cerbero.x-player.x;
+  const pdy=cerbero.y-player.y;
   const pdist=Math.sqrt(pdx*pdx+pdy*pdy);
-  if(pdist<0.5&&!hasLight){
+  if(pdist<0.45&&!hasLight){
     flash=1;SFX.stinger();
     // Guardar tiempo acumulado antes de reiniciar
     const savedTime=mazeTime;
