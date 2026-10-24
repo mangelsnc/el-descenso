@@ -597,61 +597,78 @@ const SFX={
       const C=this.ctx=new (window.AudioContext||window.webkitAudioContext)();
       this.master=C.createGain();this.master.gain.value=this.muted?0:0.5;this.master.connect(C.destination);
       
-      // Capa base: drone grave (siempre)
-      this.baseGain=C.createGain();this.baseGain.gain.value=0.04;
-      const f=C.createBiquadFilter();f.type='lowpass';f.frequency.value=180;
-      [55,55.7,110.4].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f);o.start();});
+      // === YAMAOKA STYLE ===
+      
+      // Capa base: drone industrial denso (siempre) — sierra con detune progresivo
+      this.baseGain=C.createGain();this.baseGain.gain.value=0.06;
+      const f=C.createBiquadFilter();f.type='lowpass';f.frequency.value=120;f.Q.value=8;
+      [55,55.3,55.8,110.2,110.9].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f);o.start();});
       f.connect(this.baseGain);this.baseGain.connect(this.master);
       
-      // Capa media: disonante - tritono (nivel 3+)
+      // Capa metal: resonancia de hierro (nivel 2+) — delay con feedback alto
+      this.metalGain=C.createGain();this.metalGain.gain.value=0;
+      const metalDelay=C.createDelay(1);metalDelay.delayTime.value=0.15;
+      const metalFeedback=C.createGain();metalFeedback.gain.value=0.7;
+      const metalFilter=C.createBiquadFilter();metalFilter.type='bandpass';metalFilter.frequency.value=800;metalFilter.Q.value=15;
+      [220,330,550].forEach(fr=>{const o=C.createOscillator();o.type='square';o.frequency.value=fr;o.connect(metalFilter);o.start();});
+      metalFilter.connect(metalDelay);metalDelay.connect(metalFeedback);metalFeedback.connect(metalDelay);
+      metalDelay.connect(this.metalGain);this.metalGain.connect(this.master);
+      
+      // Capa disonante: cluster de semitonos (nivel 3+) — estilo Yamaoka puro
       this.midGain=C.createGain();this.midGain.gain.value=0;
-      const f2=C.createBiquadFilter();f2.type='bandpass';f2.frequency.value=233;f2.Q.value=3;
-      [110,233,466].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f2);o.start();});
+      const f2=C.createBiquadFilter();f2.type='bandpass';f2.frequency.value=233;f2.Q.value=12;
+      [110,116.5,123.5,233,246.9].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f2);o.start();});
       f2.connect(this.midGain);this.midGain.connect(this.master);
       
-      // Capa aguda: brillo (nivel 6+)
+      // Capa aguda: cristal roto (nivel 6+) — ruido filtrado, no osciladores
       this.highGain=C.createGain();this.highGain.gain.value=0;
-      const f3=C.createBiquadFilter();f3.type='highpass';f3.frequency.value=800;
-      [880,1108,1320].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f3);o.start();});
-      f3.connect(this.highGain);this.highGain.connect(this.master);
+      const noiseBuf=C.createBuffer(1,C.sampleRate*2,C.sampleRate);
+      const noiseData=noiseBuf.getChannelData(0);
+      for(let i=0;i<noiseData.length;i++)noiseData[i]=Math.random()*2-1;
+      const noise=C.createBufferSource();noise.buffer=noiseBuf;noise.loop=true;
+      const f3=C.createBiquadFilter();f3.type='highpass';f3.frequency.value=2000;f3.Q.value=10;
+      noise.connect(f3);f3.connect(this.highGain);this.highGain.connect(this.master);
+      noise.start();
       
-      // Capa esperanza: quinto armónico cálido (solo con luz)
+      // Capa esperanza: quinto armónico cálido (solo con luz) — más suave
       this.hopeGain=C.createGain();this.hopeGain.gain.value=0;
-      const f4=C.createBiquadFilter();f4.type='lowpass';f4.frequency.value=440;f4.Q.value=2;
-      [220,330,440].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f4);o.start();});
+      const f4=C.createBiquadFilter();f4.type='lowpass';f4.frequency.value=330;f4.Q.value=4;
+      [165,220,330].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f4);o.start();});
       f4.connect(this.hopeGain);this.hopeGain.connect(this.master);
       
-      // Capa percusión: golpes graves irregulares (nivel 6+)
+      // Capa percusión: golpes de metal lejano (nivel 6+)
       this.percGain=C.createGain();this.percGain.gain.value=0;
-      const f5=C.createBiquadFilter();f5.type='lowpass';f5.frequency.value=80;
-      [40,55].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f5);o.start();});
+      const f5=C.createBiquadFilter();f5.type='lowpass';f5.frequency.value=60;
+      [35,42].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f5);o.start();});
       f5.connect(this.percGain);this.percGain.connect(this.master);
       
-      // Capa épica: cluster disonante (nivel 10)
+      // Capa épica: cluster denso (nivel 10) — semitonos + quintas desafinadas
       this.epicGain=C.createGain();this.epicGain.gain.value=0;
-      const f6=C.createBiquadFilter();f6.type='bandpass';f6.frequency.value=110;f6.Q.value=0.5;
-      [55,58,110,116,220,233].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f6);o.start();});
+      const f6=C.createBiquadFilter();f6.type='bandpass';f6.frequency.value=110;f6.Q.value=2;
+      [55,58.3,61.7,110,116.5,123.5,220,233,246.9].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f6);o.start();});
       f6.connect(this.epicGain);this.epicGain.connect(this.master);
       
-      // Latido
+      // Latido — más lento, más pesado
       const beat=()=>{this.thump();setTimeout(beat,this.heartMs);};
       beat();
       
-      // Susurros
-      const w=()=>{if(!this.muted)this.whisper();setTimeout(w,3500+Math.random()*6500);};
-      setTimeout(w,2800);
+      // Susurros — más frecuentes, más agresivos
+      const w=()=>{if(!this.muted)this.whisper();setTimeout(w,2000+Math.random()*4000);};
+      setTimeout(w,1500);
     }catch(e){}
   },
   suspend(){if(this.ctx&&this.ctx.suspend)this.ctx.suspend();},
   resume(){if(this.ctx&&this.ctx.resume)this.ctx.resume();},
   setLevel(l){
-    this.baseHeartMs=Math.max(320,950-l*65);
+    this.baseHeartMs=Math.max(400,1100-l*70); // Más lento, más pesado
     this.heartMs=this.baseHeartMs;
-    // Ajustar capas según nivel
-    if(this.midGain)this.midGain.gain.value=l>=3?0.08:0;
-    if(this.highGain)this.highGain.gain.value=0; // Desactivada - demasiado estridente
-    if(this.percGain)this.percGain.gain.value=l>=6?0.12:0;
-    if(this.epicGain)this.epicGain.gain.value=l>=10?0.15:0;
+    // Ajustar capas según nivel — Yamaoka style: denso, industrial, progresivo
+    if(this.baseGain)this.baseGain.gain.value=0.06+(l*0.008); // Base siempre, crece
+    if(this.metalGain)this.metalGain.gain.value=l>=2?0.04:0; // Metal desde nivel 2
+    if(this.midGain)this.midGain.gain.value=l>=3?0.10:0; // Disonancia nivel 3+
+    if(this.highGain)this.highGain.gain.value=l>=6?0.03:0; // Cristal nivel 6+
+    if(this.percGain)this.percGain.gain.value=l>=6?0.15:0; // Percusión nivel 6+
+    if(this.epicGain)this.epicGain.gain.value=l>=10?0.20:0; // Épico nivel 10
   },
   setHope(active){
     // Capa de esperanza: suave fade in/out
@@ -672,26 +689,39 @@ const SFX={
   thump(){
     if(this.muted||!this.ctx)return;
     const C=this.ctx,t=C.currentTime;
-    [[0,0.5],[0.14,0.3]].forEach(pair=>{
+    // Golpe principal: más grave, más largo
+    [[0,0.6],[0.2,0.25]].forEach(pair=>{
       const off=pair[0],vol=pair[1];
       const o=C.createOscillator(),g=C.createGain();
-      o.frequency.setValueAtTime(70,t+off);
-      o.frequency.exponentialRampToValueAtTime(35,t+off+0.12);
+      o.frequency.setValueAtTime(55,t+off);
+      o.frequency.exponentialRampToValueAtTime(25,t+off+0.2);
       g.gain.setValueAtTime(0,t+off);
-      g.gain.linearRampToValueAtTime(vol,t+off+0.015);
-      g.gain.exponentialRampToValueAtTime(0.001,t+off+0.18);
-      o.connect(g);g.connect(this.master);o.start(t+off);o.stop(t+off+0.25);
+      g.gain.linearRampToValueAtTime(vol,t+off+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001,t+off+0.35);
+      o.connect(g);g.connect(this.master);o.start(t+off);o.stop(t+off+0.4);
     });
+    // Click metálico ocasional (30% probabilidad)
+    if(Math.random()<0.3){
+      const o=C.createOscillator(),g=C.createGain();
+      o.type='square';o.frequency.value=800+Math.random()*1200;
+      g.gain.setValueAtTime(0.08,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.05);
+      o.connect(g);g.connect(this.master);o.start(t);o.stop(t+0.08);
+    }
   },
   whisper(){
     if(!this.ctx)return;
-    const C=this.ctx,dur=0.4+Math.random()*0.8;
+    const C=this.ctx,dur=0.6+Math.random()*1.2; // Más largo
     const buf=C.createBuffer(1,Math.floor(C.sampleRate*dur),C.sampleRate);
     const d=buf.getChannelData(0);
-    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+    // Ruido más denso, con modulación de amplitud
+    for(let i=0;i<d.length;i++){
+      const t=i/d.length;
+      d[i]=(Math.random()*2-1)*(1-t)*(0.3+Math.sin(t*20)*0.2);
+    }
     const src=C.createBufferSource();src.buffer=buf;
-    const f=C.createBiquadFilter();f.type='bandpass';f.frequency.value=800+Math.random()*2400;f.Q.value=8;
-    const g=C.createGain();g.gain.value=0.05+Math.random()*0.06;
+    const f=C.createBiquadFilter();f.type='bandpass';f.frequency.value=400+Math.random()*2000;f.Q.value=15;
+    const g=C.createGain();g.gain.value=0.08+Math.random()*0.08;
     src.connect(f);f.connect(g);
     if(C.createStereoPanner){const p=C.createStereoPanner();p.pan.value=Math.random()*2-1;g.connect(p);p.connect(this.master);}
     else g.connect(this.master);
