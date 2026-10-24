@@ -300,11 +300,17 @@ function moveCerbero(dt){
       const move=Math.min(speed*dt,dist);
       const nxp=cerbero.x+dx/dist*move,nyp=cerbero.y+dy/dist*move;
       // No atravesar paredes: comprobar la celda destino (con margen de radio)
-      const r=0.3;
+      const r=0.15;
       const wallAt=(px,py)=>{const mx=Math.floor(px),my=Math.floor(py);return !maze[my]||maze[my][mx]!==0;};
-      if(!wallAt(nxp+Math.sign(dx)*r,nyp+Math.sign(dy)*r)){cerbero.x=nxp;cerbero.y=nyp;}
-      else if(!wallAt(nxp+Math.sign(dx)*r,cerbero.y)){cerbero.x=nxp;} // desliza en X
-      else if(!wallAt(cerbero.x,nyp+Math.sign(dy)*r)){cerbero.y=nyp;} // desliza en Y
+      // Solo comprobar la dirección principal del movimiento (evita atasco en cruces)
+      const mainX=Math.abs(dx)>Math.abs(dy);
+      if(mainX){
+        if(!wallAt(nxp+Math.sign(dx)*r,nyp)){cerbero.x=nxp;cerbero.y=nyp;}
+        else if(!wallAt(nxp+Math.sign(dx)*r,cerbero.y)){cerbero.x=nxp;}
+      }else{
+        if(!wallAt(nxp,nyp+Math.sign(dy)*r)){cerbero.x=nxp;cerbero.y=nyp;}
+        else if(!wallAt(cerbero.x,nyp+Math.sign(dy)*r)){cerbero.y=nyp;}
+      }
       // Guardar velocidad para sprite
       cerbero.vx=dx/dist*speed;
       cerbero.vy=dy/dist*speed;
@@ -315,7 +321,7 @@ function moveCerbero(dt){
   const pdx=cerbero.x-player.x;
   const pdy=cerbero.y-player.y;
   const pdist=Math.sqrt(pdx*pdx+pdy*pdy);
-  if(pdist<0.45&&!hasLight){
+  if(pdist<0.35&&!hasLight){
     flash=1;SFX.stinger();
     // Guardar tiempo acumulado antes de reiniciar
     const savedTime=mazeTime;
@@ -350,7 +356,7 @@ function drawCerbero(t){
   const lightR=cellPx*2.5;
   if(d>lightR*2)return; // Solo visible cerca del jugador
   
-  const pulse=1+Math.sin(t*0.008)*0.15;
+  const pulse=1+Math.sin(t*0.006)*0.05;
   const size=cellPx*1.2*pulse;
   
   // Determinar dirección y estado
@@ -366,7 +372,7 @@ function drawCerbero(t){
   
   ctx.save();
   ctx.shadowColor='#ff0000';
-  ctx.shadowBlur=20*pulse;
+  ctx.shadowBlur=12*pulse;
   
   // Intentar dibujar sprite, si no está listo usar emoji (sin log spam)
   if(sprite&&sprite.complete&&sprite.naturalWidth>0){
