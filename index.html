@@ -325,8 +325,7 @@ const cerberoSprites={};
 const spriteNames=['up-idle','up-run','down-idle','down-run','left-idle','left-run','right-idle','right-run'];
 spriteNames.forEach(name=>{
   const img=new Image();
-  img.crossOrigin='anonymous';
-  img.src='cerbero-'+name+'.png';
+  img.src='sprites/cerbero-'+name+'.png';
   img.onload=()=>console.log('Cargado:',name);
   img.onerror=(e)=>console.error('Error cargando:',name,e);
   cerberoSprites[name]=img;
