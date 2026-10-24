@@ -325,6 +325,7 @@ const cerberoSprites={};
 const spriteNames=['up-idle','up-run','down-idle','down-run','left-idle','left-run','right-idle','right-run'];
 spriteNames.forEach(name=>{
   const img=new Image();
+  img.crossOrigin='anonymous';
   img.src='sprites/cerbero-'+name+'.png';
   cerberoSprites[name]=img;
 });
