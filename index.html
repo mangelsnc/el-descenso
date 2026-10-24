@@ -326,9 +326,12 @@ const spriteNames=['up-idle','up-run','down-idle','down-run','left-idle','left-r
 spriteNames.forEach(name=>{
   const img=new Image();
   img.crossOrigin='anonymous';
-  img.src='sprites/cerbero-'+name+'.png';
+  img.src='cerbero-'+name+'.png';
+  img.onload=()=>console.log('Cargado:',name);
+  img.onerror=(e)=>console.error('Error cargando:',name,e);
   cerberoSprites[name]=img;
 });
+console.log('Sprites inicializados:',Object.keys(cerberoSprites));
 
 function drawCerbero(t){
   if(!cerbero)return;
