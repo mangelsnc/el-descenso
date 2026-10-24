@@ -209,8 +209,8 @@ addEventListener('resize',resize);resize();
 function initCerbero(){
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
   if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;return;}
-  // Spawn en esquina opuesta al jugador
-  cerbero={x:N-2,y:1,moveCooldown:0};
+  // Spawn en esquina opuesta al jugador (movimiento celda a celda, como el jugador)
+  cerbero={cx:N-2,cy:1,x:N-2,y:1,tx:N-2,ty:1,lerp:1,vx:0,vy:0};
 }
 
 function heuristic(ax,ay,bx,by){
@@ -268,31 +268,78 @@ function findPath(startX,startY,targetX,targetY){
 
 function moveCerbero(dt){
   if(!cerbero||!running||paused)return;
-  
-  // Cooldown entre movimientos (más rápido en niveles altos)
+
+  // Velocidad (celdas por segundo) — más lento en niveles altos... y aún más si huye
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  const cooldown=Math.max(0.15,0.6-(effectiveLevel*0.04)); // segundos - más rápido
-  cerbero.moveCooldown-=dt;
-  if(cerbero.moveCooldown>0)return;
-  cerbero.moveCooldown=cooldown;
-  
-  // A* pathfinding hacia el jugador
-  const path=findPath(cerbero.x,cerbero.y,player.cx,player.cy);
-  
-  if(path&&path.length>0){
-    // Moverse al siguiente paso del camino
-    const next=path[0];
-    cerbero.x=next.x;
-    cerbero.y=next.y;
+  let speed=Math.max(1.5,3.5-(effectiveLevel*0.2));
+  const hasLight=flareActive();
+  if(hasLight)speed*=0.5;
+
+  if(cerbero.lerp<1){
+    // En tránsito entre celdas: interpolar como el jugador
+    cerbero.lerp=Math.min(1,cerbero.lerp+dt*speed);
+    cerbero.x=cerbero.cx+(cerbero.tx-cerbero.cx)*cerbero.lerp;
+    cerbero.y=cerbero.cy+(cerbero.ty-cerbero.cy)*cerbero.lerp;
+    if(cerbero.lerp>=1){cerbero.cx=cerbero.tx;cerbero.cy=cerbero.ty;}
+  }else{
+    // En el centro de una celda: elegir siguiente paso
+    let next=null;
+    if(hasLight){
+      // Huir: vecino transitable que más aleje del jugador
+      const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+      let bestD=-1;
+      for(const d of dirs){
+        const nx=cerbero.cx+d[0],ny=cerbero.cy+d[1];
+        if(nx<0||ny<0||nx>=N||ny>=N)continue;
+        if(maze[ny][nx]!==0)continue;
+        const dd=Math.abs(nx-player.cx)+Math.abs(ny-player.cy);
+        if(dd>bestD){bestD=dd;next={x:nx,y:ny};}
+      }
+    }else{
+      // Perseguir: siguiente paso del A* hacia el jugador
+      const path=findPath(cerbero.cx,cerbero.cy,player.cx,player.cy);
+      if(path&&path.length>0)next=path[0];
+    }
+    if(next&&(next.x!==cerbero.cx||next.y!==cerbero.cy)){
+      cerbero.tx=next.x;cerbero.ty=next.y;cerbero.lerp=0;
+      // Velocidad para el sprite (dirección del paso)
+      cerbero.vx=(cerbero.tx-cerbero.cx)*speed;
+      cerbero.vy=(cerbero.ty-cerbero.cy)*speed;
+    }else{
+      cerbero.vx=0;cerbero.vy=0;
+    }
   }
-  
-  // Colisión simple: si está en la misma celda que el jugador, muerte
-  if(cerbero.x===player.cx&&cerbero.y===player.cy){
+
+  // Colisión: posiciones visuales interpoladas, radio medio paso
+  const pdx=cerbero.x-player.x;
+  const pdy=cerbero.y-player.y;
+  const pdist=Math.sqrt(pdx*pdx+pdy*pdy);
+  if(pdist<0.5&&!hasLight){
     flash=1;SFX.stinger();
+    // Guardar tiempo acumulado antes de reiniciar
+    const savedTime=mazeTime;
     startLevel();
+    mazeTime=savedTime; // Restaurar tiempo acumulado
     return;
   }
 }
+
+// Cargar sprites de Cerbero (8 direcciones x 2 estados)
+const cerberoSprites={};
+const spriteNames=['up-idle','up-run','down-idle','down-run','left-idle','left-run','right-idle','right-run'];
+let spritesLoaded=0;
+spriteNames.forEach(name=>{
+  const img=new Image();
+  const key='cerbero-'+name;
+  img.src='sprites/'+key+'.png';
+  img.onload=()=>{
+    spritesLoaded++;
+    console.log('Cargado:',key,'('+spritesLoaded+'/8)');
+  };
+  img.onerror=(e)=>console.error('Error cargando:',key,e);
+  cerberoSprites[key]=img;
+});
+console.log('Sprites inicializados:',Object.keys(cerberoSprites));
 
 function drawCerbero(t){
   if(!cerbero)return;
@@ -302,12 +349,41 @@ function drawCerbero(t){
   const lightR=cellPx*2.5;
   if(d>lightR*2)return; // Solo visible cerca del jugador
   
-  const pulse=1+Math.sin(t*0.008)*0.15;
+  const pulse=1+Math.sin(t*0.006)*0.05;
+  const size=cellPx*1.2*pulse;
+  
+  // Determinar dirección y estado
+  let dir='down';
+  if(Math.abs(cerbero.vx)>Math.abs(cerbero.vy)){
+    dir=cerbero.vx>0?'right':'left';
+  }else if(Math.abs(cerbero.vy)>0.01){
+    dir=cerbero.vy>0?'down':'up';
+  }
+  const state=(Math.abs(cerbero.vx)>0.01||Math.abs(cerbero.vy)>0.01)?'run':'idle';
+  const spriteName='cerbero-'+dir+'-'+state;
+  const sprite=cerberoSprites[spriteName];
+  
   ctx.save();
-  ctx.shadowColor='#ff0000';ctx.shadowBlur=20*pulse;
-  ctx.font=Math.max(12,cellPx*1.2*pulse)+'px serif';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('🐺',cxp,cyp);
+  ctx.shadowColor='#ff0000';
+  ctx.shadowBlur=12*pulse;
+  
+  // Intentar dibujar sprite, si no está listo usar emoji (sin log spam)
+  if(sprite&&sprite.complete&&sprite.naturalWidth>0){
+    ctx.drawImage(sprite,cxp-size/2,cyp-size/2,size,size);
+    if(!window._cerberoSpriteLogged){
+      console.log('Sprite dibujado:',spriteName);
+      window._cerberoSpriteLogged=true;
+    }
+  }else{
+    // Emoji fallback silencioso (solo log una vez)
+    if(!window._cerberoEmojiLogged){
+      console.log('Emoji fallback (cargando sprites...):',spriteName,'complete='+sprite?.complete,'naturalWidth='+sprite?.naturalWidth);
+      window._cerberoEmojiLogged=true;
+    }
+    ctx.font=Math.max(16,size)+'px serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🐺',cxp,cyp);
+  }
   ctx.restore();
 }
 
@@ -409,6 +485,7 @@ function update(dt){
           flareUntil=now+FLARE_MS;
           flareBoost=FLARE_BOOST;
           SFX.pickup();
+          SFX.setHope(true);
         }else{
           if(flareActive()){
             flareUntil+=EXT_BONUS_MS;
@@ -418,6 +495,7 @@ function update(dt){
             flareBoost=EXT_SOLO_BOOST;
             SFX.pickup();
           }
+          SFX.setHope(true);
         }
       }
       if(player.cx===goal.x&&player.cy===goal.y){completeLevel();return;}
@@ -512,25 +590,85 @@ function fmt(ms){
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 const SFX={
-  ctx:null,muted:false,heartMs:950,master:null,
+  ctx:null,muted:false,heartMs:950,baseHeartMs:950,master:null,
   init(){
     if(this.ctx){this.ctx.resume&&this.ctx.resume();return;}
     try{
       const C=this.ctx=new (window.AudioContext||window.webkitAudioContext)();
       this.master=C.createGain();this.master.gain.value=this.muted?0:0.5;this.master.connect(C.destination);
-      const g=C.createGain();g.gain.value=0.05;
-      const f=C.createBiquadFilter();f.type='lowpass';f.frequency.value=200;
+      
+      // Capa base: drone grave (siempre)
+      this.baseGain=C.createGain();this.baseGain.gain.value=0.04;
+      const f=C.createBiquadFilter();f.type='lowpass';f.frequency.value=180;
       [55,55.7,110.4].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f);o.start();});
-      f.connect(g);g.connect(this.master);
+      f.connect(this.baseGain);this.baseGain.connect(this.master);
+      
+      // Capa media: disonante - tritono (nivel 3+)
+      this.midGain=C.createGain();this.midGain.gain.value=0;
+      const f2=C.createBiquadFilter();f2.type='bandpass';f2.frequency.value=233;f2.Q.value=3;
+      [110,233,466].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f2);o.start();});
+      f2.connect(this.midGain);this.midGain.connect(this.master);
+      
+      // Capa aguda: brillo (nivel 6+)
+      this.highGain=C.createGain();this.highGain.gain.value=0;
+      const f3=C.createBiquadFilter();f3.type='highpass';f3.frequency.value=800;
+      [880,1108,1320].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f3);o.start();});
+      f3.connect(this.highGain);this.highGain.connect(this.master);
+      
+      // Capa esperanza: quinto armónico cálido (solo con luz)
+      this.hopeGain=C.createGain();this.hopeGain.gain.value=0;
+      const f4=C.createBiquadFilter();f4.type='lowpass';f4.frequency.value=440;f4.Q.value=2;
+      [220,330,440].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f4);o.start();});
+      f4.connect(this.hopeGain);this.hopeGain.connect(this.master);
+      
+      // Capa percusión: golpes graves irregulares (nivel 6+)
+      this.percGain=C.createGain();this.percGain.gain.value=0;
+      const f5=C.createBiquadFilter();f5.type='lowpass';f5.frequency.value=80;
+      [40,55].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f5);o.start();});
+      f5.connect(this.percGain);this.percGain.connect(this.master);
+      
+      // Capa épica: cluster disonante (nivel 10)
+      this.epicGain=C.createGain();this.epicGain.gain.value=0;
+      const f6=C.createBiquadFilter();f6.type='bandpass';f6.frequency.value=110;f6.Q.value=0.5;
+      [55,58,110,116,220,233].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f6);o.start();});
+      f6.connect(this.epicGain);this.epicGain.connect(this.master);
+      
+      // Latido
       const beat=()=>{this.thump();setTimeout(beat,this.heartMs);};
       beat();
+      
+      // Susurros
       const w=()=>{if(!this.muted)this.whisper();setTimeout(w,3500+Math.random()*6500);};
       setTimeout(w,2800);
     }catch(e){}
   },
   suspend(){if(this.ctx&&this.ctx.suspend)this.ctx.suspend();},
   resume(){if(this.ctx&&this.ctx.resume)this.ctx.resume();},
-  setLevel(l){this.heartMs=Math.max(420,950-l*55);},
+  setLevel(l){
+    this.baseHeartMs=Math.max(320,950-l*65);
+    this.heartMs=this.baseHeartMs;
+    // Ajustar capas según nivel
+    if(this.midGain)this.midGain.gain.value=l>=3?0.08:0;
+    if(this.highGain)this.highGain.gain.value=0; // Desactivada - demasiado estridente
+    if(this.percGain)this.percGain.gain.value=l>=6?0.12:0;
+    if(this.epicGain)this.epicGain.gain.value=l>=10?0.15:0;
+  },
+  setHope(active){
+    // Capa de esperanza: suave fade in/out
+    if(this.hopeGain){
+      const target=active?0.08:0;
+      this.hopeGain.gain.linearRampToValueAtTime(target,this.ctx.currentTime+0.8);
+    }
+  },
+  setCerberoProximity(dist){
+    // Acelerar latido cuando Cerbero está cerca (dist en celdas)
+    if(dist<5){
+      const urgency=1-(dist/5); // 0 a 1
+      this.heartMs=Math.max(280,this.baseHeartMs*(1-urgency*0.4));
+    }else{
+      this.heartMs=this.baseHeartMs;
+    }
+  },
   thump(){
     if(this.muted||!this.ctx)return;
     const C=this.ctx,t=C.currentTime;
@@ -798,8 +936,9 @@ function startLevel(){
   player={cx:1,cy:1,x:1,y:1,tx:1,ty:1,lerp:1};
   flareUntil=0;flareBoost=0;
   spawnItems();
-  mazeStart=performance.now();mazeTime=0;
-  SFX.setLevel(level);
+  // No reiniciar mazeTime - el tiempo se acumula entre intentos
+  if(mazeTime===0)mazeStart=performance.now();
+  SFX.setLevel(DEBUG?DEBUG_DISPLAY_LEVEL:level);
 }
 function startGame(){
   level=DEBUG_START_LEVEL;totalMs=0;flash=0;paused=false;speedBonus=0;
@@ -862,8 +1001,15 @@ function loop(t){
     if(flareActive()){
       const icon=flareBoost>1.5?'🔥':'🕯️';
       _$('flareHud').textContent=icon+' '+Math.ceil((flareUntil-performance.now())/1000)+'s';
+      SFX.setHope(true);
     }else{
       _$('flareHud').textContent='';
+      SFX.setHope(false);
+    }
+    // Proximidad de Cerbero para latido
+    if(cerbero){
+      const dist=Math.abs(cerbero.x-player.cx)+Math.abs(cerbero.y-player.cy);
+      SFX.setCerberoProximity(dist);
     }
   }
   requestAnimationFrame(loop);
