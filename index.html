@@ -323,10 +323,14 @@ function moveCerbero(dt){
 // Cargar sprites de Cerbero (8 direcciones x 2 estados)
 const cerberoSprites={};
 const spriteNames=['up-idle','up-run','down-idle','down-run','left-idle','left-run','right-idle','right-run'];
+let spritesLoaded=0;
 spriteNames.forEach(name=>{
   const img=new Image();
   img.src='sprites/cerbero-'+name+'.png';
-  img.onload=()=>console.log('Cargado:',name);
+  img.onload=()=>{
+    spritesLoaded++;
+    console.log('Cargado:',name,'('+spritesLoaded+'/8)');
+  };
   img.onerror=(e)=>console.error('Error cargando:',name,e);
   cerberoSprites[name]=img;
 });
@@ -358,16 +362,19 @@ function drawCerbero(t){
   ctx.shadowColor='#ff0000';
   ctx.shadowBlur=20*pulse;
   
-  // Intentar dibujar sprite, si falla usar emoji
-  try{
-    if(sprite&&sprite.complete&&sprite.naturalWidth>0){
-      ctx.drawImage(sprite,cxp-size/2,cyp-size/2,size,size);
-      if(!window._cerberoSpriteLogged){console.log('Sprite dibujado:',spriteName);window._cerberoSpriteLogged=true;}
-    }else{
-      throw new Error('not loaded: '+spriteName+' complete='+sprite?.complete+' naturalWidth='+sprite?.naturalWidth);
+  // Intentar dibujar sprite, si no está listo usar emoji (sin log spam)
+  if(sprite&&sprite.complete&&sprite.naturalWidth>0){
+    ctx.drawImage(sprite,cxp-size/2,cyp-size/2,size,size);
+    if(!window._cerberoSpriteLogged){
+      console.log('Sprite dibujado:',spriteName);
+      window._cerberoSpriteLogged=true;
     }
-  }catch(e){
-    if(!window._cerberoEmojiLogged){console.log('Emoji fallback:',e.message);window._cerberoEmojiLogged=true;}
+  }else{
+    // Emoji fallback silencioso (solo log una vez)
+    if(!window._cerberoEmojiLogged){
+      console.log('Emoji fallback (cargando sprites...):',spriteName,'complete='+sprite?.complete,'naturalWidth='+sprite?.naturalWidth);
+      window._cerberoEmojiLogged=true;
+    }
     ctx.font=Math.max(16,size)+'px serif';
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('🐺',cxp,cyp);
