@@ -209,8 +209,8 @@ addEventListener('resize',resize);resize();
 function initCerbero(){
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
   if(effectiveLevel<CERBERO_MIN_LEVEL){cerbero=null;return;}
-  // Spawn en esquina opuesta al jugador
-  cerbero={x:N-2,y:1,vx:0,vy:0,moveCooldown:0};
+  // Spawn en esquina opuesta al jugador (movimiento celda a celda, como el jugador)
+  cerbero={cx:N-2,cy:1,x:N-2,y:1,tx:N-2,ty:1,lerp:1,vx:0,vy:0};
 }
 
 function heuristic(ax,ay,bx,by){
@@ -268,60 +268,53 @@ function findPath(startX,startY,targetX,targetY){
 
 function moveCerbero(dt){
   if(!cerbero||!running||paused)return;
-  
-  // Velocidad lineal (celdas por segundo) - más rápido en niveles altos
+
+  // Velocidad (celdas por segundo) — más lento en niveles altos... y aún más si huye
   const effectiveLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
-  let speed=Math.max(1.5, 3.5-(effectiveLevel*0.2)); // celdas/segundo
-  
-  // Si el jugador tiene luz, Cerbero huye (más lento y dirección contraria)
+  let speed=Math.max(1.5,3.5-(effectiveLevel*0.2));
   const hasLight=flareActive();
-  if(hasLight){
-    speed*=0.5; // Más lento huyendo
-  }
-  
-  // A* pathfinding hacia el jugador (usar posición redondeada)
-  const cx=Math.round(cerbero.x),cy=Math.round(cerbero.y);
-  const path=findPath(cx,cy,player.cx,player.cy);
-  
-  if(path&&path.length>0){
-    // Objetivo: siguiente paso del camino
-    const target=path[0];
-    let dx=target.x-cerbero.x;
-    let dy=target.y-cerbero.y;
-    const dist=Math.sqrt(dx*dx+dy*dy);
-    
-    if(dist>0.01){
-      // Si tiene luz, invertir dirección (huir)
-      if(hasLight){
-        dx=-dx;
-        dy=-dy;
+  if(hasLight)speed*=0.5;
+
+  if(cerbero.lerp<1){
+    // En tránsito entre celdas: interpolar como el jugador
+    cerbero.lerp=Math.min(1,cerbero.lerp+dt*speed);
+    cerbero.x=cerbero.cx+(cerbero.tx-cerbero.cx)*cerbero.lerp;
+    cerbero.y=cerbero.cy+(cerbero.ty-cerbero.cy)*cerbero.lerp;
+    if(cerbero.lerp>=1){cerbero.cx=cerbero.tx;cerbero.cy=cerbero.ty;}
+  }else{
+    // En el centro de una celda: elegir siguiente paso
+    let next=null;
+    if(hasLight){
+      // Huir: vecino transitable que más aleje del jugador
+      const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+      let bestD=-1;
+      for(const d of dirs){
+        const nx=cerbero.cx+d[0],ny=cerbero.cy+d[1];
+        if(nx<0||ny<0||nx>=N||ny>=N)continue;
+        if(maze[ny][nx]!==0)continue;
+        const dd=Math.abs(nx-player.cx)+Math.abs(ny-player.cy);
+        if(dd>bestD){bestD=dd;next={x:nx,y:ny};}
       }
-      // Movimiento lineal suave — clamp al waypoint para no cortar esquinas
-      const move=Math.min(speed*dt,dist);
-      const nxp=cerbero.x+dx/dist*move,nyp=cerbero.y+dy/dist*move;
-      // No atravesar paredes: comprobar la celda destino (con margen de radio)
-      const r=0.15;
-      const wallAt=(px,py)=>{const mx=Math.floor(px),my=Math.floor(py);return !maze[my]||maze[my][mx]!==0;};
-      // Solo comprobar la dirección principal del movimiento (evita atasco en cruces)
-      const mainX=Math.abs(dx)>Math.abs(dy);
-      if(mainX){
-        if(!wallAt(nxp+Math.sign(dx)*r,nyp)){cerbero.x=nxp;cerbero.y=nyp;}
-        else if(!wallAt(nxp+Math.sign(dx)*r,cerbero.y)){cerbero.x=nxp;}
-      }else{
-        if(!wallAt(nxp,nyp+Math.sign(dy)*r)){cerbero.x=nxp;cerbero.y=nyp;}
-        else if(!wallAt(cerbero.x,nyp+Math.sign(dy)*r)){cerbero.y=nyp;}
-      }
-      // Guardar velocidad para sprite
-      cerbero.vx=dx/dist*speed;
-      cerbero.vy=dy/dist*speed;
+    }else{
+      // Perseguir: siguiente paso del A* hacia el jugador
+      const path=findPath(cerbero.cx,cerbero.cy,player.cx,player.cy);
+      if(path&&path.length>0)next=path[0];
+    }
+    if(next&&(next.x!==cerbero.cx||next.y!==cerbero.cy)){
+      cerbero.tx=next.x;cerbero.ty=next.y;cerbero.lerp=0;
+      // Velocidad para el sprite (dirección del paso)
+      cerbero.vx=(cerbero.tx-cerbero.cx)*speed;
+      cerbero.vy=(cerbero.ty-cerbero.cy)*speed;
+    }else{
+      cerbero.vx=0;cerbero.vy=0;
     }
   }
-  
-  // Colisión: si está muy cerca del jugador, muerte (solo si no tiene luz)
+
+  // Colisión: posiciones visuales interpoladas, radio medio paso
   const pdx=cerbero.x-player.x;
   const pdy=cerbero.y-player.y;
   const pdist=Math.sqrt(pdx*pdx+pdy*pdy);
-  if(pdist<0.35&&!hasLight){
+  if(pdist<0.5&&!hasLight){
     flash=1;SFX.stinger();
     // Guardar tiempo acumulado antes de reiniciar
     const savedTime=mazeTime;
