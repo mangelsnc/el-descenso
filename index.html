@@ -630,10 +630,10 @@ const SFX={
       noise.connect(f3);f3.connect(this.highGain);this.highGain.connect(this.master);
       noise.start();
       
-      // Capa esperanza: quinto armónico cálido (solo con luz) — más suave
+      // Capa tregua: drone grave tenso (solo con luz) — no es esperanza, es pausa
       this.hopeGain=C.createGain();this.hopeGain.gain.value=0;
-      const f4=C.createBiquadFilter();f4.type='lowpass';f4.frequency.value=330;f4.Q.value=4;
-      [165,220,330].forEach(fr=>{const o=C.createOscillator();o.type='sine';o.frequency.value=fr;o.connect(f4);o.start();});
+      const f4=C.createBiquadFilter();f4.type='lowpass';f4.frequency.value=180;f4.Q.value=6;
+      [82.4,110,164.8].forEach(fr=>{const o=C.createOscillator();o.type='sawtooth';o.frequency.value=fr;o.connect(f4);o.start();});
       f4.connect(this.hopeGain);this.hopeGain.connect(this.master);
       
       // Capa percusión: golpes de metal lejano (nivel 6+)
@@ -671,10 +671,10 @@ const SFX={
     if(this.epicGain)this.epicGain.gain.value=l>=10?0.20:0; // Épico nivel 10
   },
   setHope(active){
-    // Capa de esperanza: suave fade in/out
+    // Capa de tregua: fade muy lento, volumen bajo — la luz solo silencia el horror
     if(this.hopeGain){
-      const target=active?0.08:0;
-      this.hopeGain.gain.linearRampToValueAtTime(target,this.ctx.currentTime+0.8);
+      const target=active?0.04:0;
+      this.hopeGain.gain.linearRampToValueAtTime(target,this.ctx.currentTime+1.5);
     }
   },
   setCerberoProximity(dist){
