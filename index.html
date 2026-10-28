@@ -428,7 +428,8 @@ function genMaze(n){
 function parMs(n){return n*1200;}
 function spawnItems(){
   items=[];
-  if(level<FLARE_MIN_LEVEL)return;
+  const effLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
+  if(effLevel<FLARE_MIN_LEVEL)return;
   let count=0;
   while(count<3&&Math.random()<speedBonus)count++;
   if(!count)return;
@@ -440,7 +441,7 @@ function spawnItems(){
     if(Math.abs(x-1)+Math.abs(y-1)<4)continue;
     open.push({x:x,y:y});
   }
-  const withExt=level>=EXT_MIN_LEVEL;
+  const withExt=effLevel>=EXT_MIN_LEVEL;
   let nFlares=withExt?Math.min(count,2):count;
   let nExt=(withExt&&count>=2)?1:0;
   let total=Math.min(nFlares+nExt,open.length);
@@ -512,7 +513,7 @@ function draw(t){
   cellPx=side/N;
   const pxc=(player.x+0.5)*cellPx,pyc=(player.y+0.5)*cellPx;
   const flick=1+Math.sin(t*0.02)*0.05+(Math.random()-0.5)*0.06;
-  const shrink=Math.max(1.7,2.5-level*0.08);
+  const shrink=Math.max(1.7,2.5-(DEBUG?DEBUG_DISPLAY_LEVEL:level)*0.08);
   const warm=flareActive();
   const boost=warm?flareBoost:1;
   const lightR=cellPx*shrink*boost*flick,reach=lightR*2.5;
