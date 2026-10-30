@@ -430,9 +430,8 @@ function spawnItems(){
   items=[];
   const effLevel=DEBUG?DEBUG_DISPLAY_LEVEL:level;
   if(effLevel<FLARE_MIN_LEVEL)return;
-  let count=0;
+  let count=1; // Baseline: al menos 1 brasa; la velocidad añade hasta 3
   while(count<3&&Math.random()<speedBonus)count++;
-  if(!count)return;
   const open=[];
   for(let y=1;y<N;y++)for(let x=1;x<N;x++){
     if(maze[y][x]!==0)continue;
@@ -972,7 +971,7 @@ function startLevel(){
   SFX.setLevel(DEBUG?DEBUG_DISPLAY_LEVEL:level);
 }
 function startGame(){
-  level=DEBUG_START_LEVEL;totalMs=0;flash=0;paused=false;speedBonus=0;
+  level=DEBUG_START_LEVEL;totalMs=0;flash=0;paused=false;speedBonus=DEBUG?1:0;
   cerberoWarned=false; // Resetear para que vuelva a salir el warning
   running=true;
   SFX.init();SFX.resume();
