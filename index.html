@@ -484,7 +484,7 @@ function update(dt){
         if(it.type==='flare'){
           flareUntil=now+FLARE_MS;
           flareBoost=FLARE_BOOST;
-          SFX.pickup();
+          SFX.flarePickup();
           SFX.setHope(true);
         }else{
           if(flareActive()){
@@ -671,10 +671,27 @@ const SFX={
     if(this.epicGain)this.epicGain.gain.value=l>=10?0.20:0; // Épico nivel 10
   },
   setHope(active){
-    // Capa de tregua: fade muy lento, volumen bajo — la luz solo silencia el horror
-    if(this.hopeGain){
-      const target=active?0.04:0;
-      this.hopeGain.gain.linearRampToValueAtTime(target,this.ctx.currentTime+1.5);
+    // Solo actuar en el cambio de estado (el loop llama cada frame)
+    if(this._hopeState===active)return;
+    this._hopeState=active;
+    if(!this.ctx)return;
+    const t=this.ctx.currentTime;
+    const ramp=(p,target,dur)=>{try{p.cancelScheduledValues(t);p.setValueAtTime(p.value,t);p.linearRampToValueAtTime(target,t+dur);}catch(e){}};
+    const l=DEBUG?DEBUG_DISPLAY_LEVEL:level;
+    if(active){
+      // La luz silencia el horror: las capas hostiles se hunden, sube la tregua
+      if(this.metalGain)ramp(this.metalGain.gain,0,1.5);
+      if(this.midGain)ramp(this.midGain.gain,0,1.5);
+      if(this.percGain)ramp(this.percGain.gain,0,1.5);
+      if(this.epicGain)ramp(this.epicGain.gain,0,1.5);
+      if(this.hopeGain)ramp(this.hopeGain.gain,0.10,1.5);
+    }else{
+      // Se acabó la tregua: el horror vuelve a su nivel
+      if(this.metalGain)ramp(this.metalGain.gain,l>=2?0.04:0,2.0);
+      if(this.midGain)ramp(this.midGain.gain,l>=3?0.10:0,2.0);
+      if(this.percGain)ramp(this.percGain.gain,l>=6?0.15:0,2.0);
+      if(this.epicGain)ramp(this.epicGain.gain,l>=10?0.20:0,2.0);
+      if(this.hopeGain)ramp(this.hopeGain.gain,0,1.0);
     }
   },
   setCerberoProximity(dist){
@@ -752,6 +769,28 @@ const SFX={
       g.gain.exponentialRampToValueAtTime(0.001,st+0.3);
       o.connect(g);g.connect(this.master);o.start(st);o.stop(st+0.35);
     });
+  },
+  flarePickup(){
+    if(!this.ctx||this.muted)return;
+    const C=this.ctx,t=C.currentTime;
+    // La llama prende: swell grave que crece
+    const o=C.createOscillator(),g=C.createGain();
+    o.type='sine';
+    o.frequency.setValueAtTime(55,t);
+    o.frequency.exponentialRampToValueAtTime(110,t+0.9);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.25,t+0.15);
+    g.gain.exponentialRampToValueAtTime(0.001,t+1.2);
+    o.connect(g);g.connect(this.master);o.start(t);o.stop(t+1.3);
+    // Soplo de brasa al prender
+    const dur=0.5;
+    const buf=C.createBuffer(1,Math.floor(C.sampleRate*dur),C.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+    const src=C.createBufferSource();src.buffer=buf;
+    const f=C.createBiquadFilter();f.type='bandpass';f.frequency.value=600;f.Q.value=2;
+    const g2=C.createGain();g2.gain.value=0.12;
+    src.connect(f);f.connect(g2);g2.connect(this.master);src.start(t);
   },
   extend(){
     if(!this.ctx||this.muted)return;
