@@ -1045,7 +1045,23 @@ function win(){
   _$('endScreen').classList.remove('hidden');
   setTimeout(()=>_$('nameInput').focus(),150);
 }
-_$('startBtn').onclick=startGame;
+// Voz de intro: la inscripción de la puerta (Infierno III)
+const introAudio=new Audio('audio/intro.mp3');
+introAudio.preload='auto';
+function playIntro(){
+  if(SFX.muted)return;
+  try{
+    introAudio.currentTime=0;
+    // Agachar el juego mientras habla la puerta
+    if(SFX.master)SFX.master.gain.value=0.15;
+    introAudio.onended=()=>{if(SFX.master&&!SFX.muted)SFX.master.gain.value=0.5;};
+    introAudio.play();
+  }catch(e){}
+}
+_$('startBtn').onclick=()=>{
+  startGame();
+  playIntro(); // La voz suena sobre LA PUERTA — entras mientras la puerta habla
+};
 _$('againBtn').onclick=startGame;
 _$('signBtn').onclick=async()=>{
   const name=(_$('nameInput').value.trim()||'ANÓNIMO').toUpperCase();
