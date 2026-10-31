@@ -1034,6 +1034,16 @@ function completeLevel(){
 function win(){
   running=false;finalTime=totalMs;
   SFX.boom();setTimeout(()=>SFX.chime(),900);
+  // La voz de la salida: tras la campana, con el juego agachado
+  setTimeout(()=>{
+    if(SFX.muted)return;
+    try{
+      outroAudio.currentTime=0;
+      if(SFX.master)SFX.master.gain.value=0.12;
+      outroAudio.onended=()=>{if(SFX.master&&!SFX.muted)SFX.master.gain.value=0.5;};
+      outroAudio.play();
+    }catch(e){}
+  },2600);
   makeStars();
   _$('endScreen').classList.add('stars');
   _$('verse').classList.remove('hidden');
@@ -1048,6 +1058,9 @@ function win(){
 // Voz de intro: la inscripción de la puerta (Infierno III)
 const introAudio=new Audio('audio/intro.mp3');
 introAudio.preload='auto';
+// Voz de outro: la salida del Infierno (Infierno XXXIV)
+const outroAudio=new Audio('audio/outro.mp3');
+outroAudio.preload='auto';
 function playIntro(){
   if(SFX.muted)return;
   try{
